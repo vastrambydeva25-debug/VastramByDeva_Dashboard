@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+
+  <div class="silk-wave" style="pointer-events:none;"></div>
+  <div class="sparkle" style="top:30%; left:20%; pointer-events:none;"></div>
+  <div class="sparkle" style="top:40%; right:25%; animation-delay:1s; pointer-events:none;"></div>
+  <div class="sparkle" style="top:60%; left:30%; animation-delay:2s; pointer-events:none;"></div>
+
+  <div class="login-card" style="z-index:10;">
+    <img src="assets/Vastram_logo.png" class="logo" alt="Vastram By Deva">
+    <h2>Vastram By Deva</h2>
+    <div class="brand-line">Elegant • Traditional • Premium • Royal</div>
+
+    <input type="email" id="email" placeholder="Email">
+
+    <div class="password-wrapper">
+      <input type="password" id="password" placeholder="Password">
+      <span class="toggle-link" id="togglePass">Show</span>
+    </div>
+
+    <div class="remember">
+      <input type="checkbox" id="remember">
+      <label for="remember">Remember me</label>
+    </div>
+
+    <button id="loginBtn">
+      <span id="btnText">Login</span>
+      <div class="login-spinner" id="spinner"></div>
+    </button>
+
+    <div class="login-footer">© 2026 Vastram By Deva</div>
+  </div>
+
+<script type="module">
+import { auth } from "./js/firebase-config.js";
+import { signInWithEmailAndPassword, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// If already logged in, redirect
+onAuthStateChanged(auth, (user) => {
+  if (user) window.location.href = "home.html";
+});
+
+const loginBtn = document.getElementById("loginBtn");
+const spinner = document.getElementById("spinner");
+const btnText = document.getElementById("btnText");
+
+loginBtn.addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  if (!email || !password) {
+    alert("Please enter email & password ❗");
+    return;
+  }
+
+  spinner.style.display = "inline-block";
+  btnText.innerText = "Signing In...";
+  loginBtn.disabled = true;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    btnText.innerText = "Success 👑";
+    setTimeout(() => { window.location.href = "home.html"; }, 800);
+  } catch (error) {
+    spinner.style.display = "none";
+    btnText.innerText = "Login";
+    loginBtn.disabled = false;
+    alert("Login Failed ❌\n" + error.message);
+  }
+});
+
+// Show/Hide password
+const togglePass = document.getElementById("togglePass");
+const passwordInput = document.getElementById("password");
+togglePass.addEventListener("click", () => {
+  if (passwordInput.type === "password") {
+    passwordInput.type = "text";
+    togglePass.innerText = "Hide";
+  } else {
+    passwordInput.type = "password";
+    togglePass.innerText = "Show";
+  }
+});
+</script>
+</body>
+</html>

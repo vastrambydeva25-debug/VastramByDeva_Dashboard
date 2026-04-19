@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard | Vastram By Deva</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+:root{
+  --maroon:#6E2C1A;
+  --deep:#4A1C12;
+  --gold:#C8A24D;
+  --cream:#F9F3EC;
+}
+
+/* ===== BACKGROUND ===== */
+
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:linear-gradient(135deg,#6E2C1A,#4A1C12);
+  color:white;
+  min-height:100vh;
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* Watermark sides */
+body::before,
+body::after{
+  content:"";
+  position:absolute;
+  top:50%;
+  width:400px;
+  height:400px;
+  background:url('assets/Vastram_logo.png') no-repeat center;
+  background-size:contain;
+  opacity:.05;
+  transform:translateY(-50%);
+}
+
+body::before{ left:40px; }
+body::after{ right:40px; }
+
+/* ===== HEADER ===== */
+
+.dashboard-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:20px 40px;
+  backdrop-filter:blur(10px);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:15px;
+}
+
+.header-logo{
+  width:150px;
+}
+
+.brand h3{
+  font-family:'Playfair Display',serif;
+  font-size:24px;
+  color:var(--gold);
+  margin:0;
+}
+
+.primary-btn{
+  padding:12px 20px;
+  background:var(--gold);
+  color:#4A1C12;
+  border:none;
+  border-radius:20px;
+  font-weight:600;
+  cursor:pointer;
+  transition:.3s;
+}
+
+.primary-btn:hover{
+  background:white;
+}
+
+/* ===== SECTION ===== */
+
+.dashboard-section{
+  padding:30px 50px;
+}
+
+.page-title{
+  font-family:'Playfair Display',serif;
+  font-size:32px;
+  margin-bottom:30px;
+  color:var(--gold);
+}
+
+/* ===== STATS ===== */
+
+.stats-container{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:25px;
+  margin-bottom:40px;
+}
+
+.stat-card{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  backdrop-filter:blur(15px);
+  padding:25px;
+  border-radius:20px;
+  text-align:center;
+  transition:.3s;
+}
+
+.stat-card:hover{
+  transform:translateY(-5px);
+  box-shadow:0 15px 30px rgba(0,0,0,.3);
+}
+
+.stat-card h4{
+  margin:0 0 10px;
+  font-weight:500;
+}
+
+.stat-number{
+  font-size:28px;
+  font-weight:700;
+  color:var(--gold);
+}
+
+/* ===== CHARTS ===== */
+
+.charts-wrapper{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(350px,1fr));
+  gap:30px;
+}
+
+.chart-card{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  backdrop-filter:blur(15px);
+  padding:25px;
+  border-radius:25px;
+  height:380px;
+}
+
+.chart-card h3{
+  margin-bottom:15px;
+  color:var(--gold);
+}
+
+canvas{
+  width:100% !important;
+  height:280px !important;
+}
+
+</style>
+</head>
+
+<body>
+
+<header class="dashboard-header">
+  <div class="brand">
+    <img src="assets/Vastram_logo.png" class="header-logo">
+    <h3>Vastram By Deva</h3>
+  </div>
+  <button class="primary-btn" onclick="window.location.href='orders.html'">
+    + New Order
+  </button>
+</header>
+
+<section class="dashboard-section">
+
+<h2 class="page-title">Dashboard Overview</h2>
+
+<div class="stats-container">
+  <div class="stat-card">
+    <h4>Total Orders</h4>
+    <div class="stat-number" id="totalOrders">0</div>
+  </div>
+
+  <div class="stat-card">
+    <h4>Total Revenue</h4>
+    <div class="stat-number">₹<span id="totalRevenue">0</span></div>
+  </div>
+
+  <div class="stat-card">
+    <h4>Total Expense</h4>
+    <div class="stat-number">₹<span id="totalExpense">0</span></div>
+  </div>
+
+  <div class="stat-card">
+    <h4>Total Profit</h4>
+    <div class="stat-number">₹<span id="totalProfit">0</span></div>
+  </div>
+</div>
+
+<div class="charts-wrapper">
+  <div class="chart-card">
+    <h3>Revenue Overview</h3>
+    <canvas id="revenueChart"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <h3>Profit vs Expense</h3>
+    <canvas id="profitChart"></canvas>
+  </div>
+</div>
+
+</section>
+
+<!-- 🔥 Firebase + Dashboard Script -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAY_oTerSMIF8FYoKyyFIokX-jadXqEtb0",
+  authDomain: "vastrambydeva-fa343.firebaseapp.com",
+  projectId: "vastrambydeva-fa343",
+  storageBucket: "vastrambydeva-fa343.firebasestorage.app",
+  messagingSenderId: "988690580826",
+  appId: "1:988690580826:web:b447539adcca2032d89f63"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let revenueChart;
+let profitChart;
+
+onAuthStateChanged(auth,(user)=>{
+  if(!user){
+    window.location.href="index.html";
+  } else{
+    initCharts();
+    loadDashboard();
+  }
+});
+
+async function loadDashboard(){
+  const snapshot = await getDocs(collection(db,"orders"));
+
+  let totalOrders=0,totalRevenue=0,totalExpense=0,totalProfit=0;
+
+  snapshot.forEach(doc=>{
+    const o=doc.data();
+    const r=Number(o.custAmount)||0;
+    const v=Number(o.vendorAmount)||0;
+    const e=Number(o.expenseAmount)||0;
+
+    totalOrders++;
+    totalRevenue+=r;
+    totalExpense+=(v+e);
+    totalProfit+=(r-v-e);
+  });
+
+  document.getElementById("totalOrders").innerText=totalOrders;
+  document.getElementById("totalRevenue").innerText=totalRevenue;
+  document.getElementById("totalExpense").innerText=totalExpense;
+  document.getElementById("totalProfit").innerText=totalProfit;
+
+  updateCharts(totalRevenue,totalExpense,totalProfit);
+}
+
+function initCharts(){
+  revenueChart=new Chart(document.getElementById("revenueChart"),{
+    type:'bar',
+    data:{
+      labels:["Income","Expense","Profit"],
+      datasets:[{
+        data:[0,0,0],
+        backgroundColor:["#6E2C1A","#C8A24D","#2ecc71"]
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+
+  profitChart=new Chart(document.getElementById("profitChart"),{
+    type:'pie',
+    data:{
+      labels:["Profit","Expense"],
+      datasets:[{
+        data:[0,0],
+        backgroundColor:["#2ecc71","#C8A24D"]
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false}
+  });
+}
+
+function updateCharts(r,e,p){
+  revenueChart.data.datasets[0].data=[r,e,p];
+  revenueChart.update();
+
+  profitChart.data.datasets[0].data=[p,e];
+  profitChart.update();
+}
+
+</script>
+
+</body>
+</html>

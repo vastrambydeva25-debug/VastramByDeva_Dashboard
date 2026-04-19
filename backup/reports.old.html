@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reports | Vastram By Deva</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/style.css">
+
+<!-- Chart JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+/* ===== CHART GRID ===== */
+
+/* ===== CHART LAYOUT FIX ===== */
+
+/* ===== CHART LAYOUT FIX ===== */
+
+.charts-wrapper{
+  display:flex;
+  gap:30px;
+  margin-top:40px;
+  flex-wrap:wrap;
+}
+
+.chart-card{
+  flex:1;
+  min-width:320px;
+  max-width:500px;
+  background:#ffffff;
+  padding:20px;
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.05);
+}
+
+.chart-card canvas{
+  height:250px !important;
+}
+
+
+
+.details-box{
+  padding:15px;
+  background:#fafafa;
+  border-radius:8px;
+}
+
+.action-buttons{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.action-buttons button{
+  padding:6px 12px;
+  font-size:13px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  width:auto;
+}
+
+.btn-edit{ background:#e0b64d; }
+.btn-delete{ background:#e74c3c; color:white; }
+.btn-vendor{ background:#ff9800; color:white; }
+.btn-ship{ background:#3498db; color:white; }
+.btn-deliver{ background:#27ae60; color:white; }
+.btn-print{ background:#333; color:white; }
+.btn-wa{ background:#25d366; color:white; }
+
+</style>
+
+</head>
+<body>
+
+<header class="dashboard-header">
+  <div class="brand">
+    <img src="assets/Vastram_logo.png" class="header-logo">
+    <h3>Vastram By Deva</h3>
+  </div>
+  <button class="primary-btn" onclick="window.location.href='orders.html'">
+    + New Order
+  </button>
+</header>
+
+<section class="reports-section">
+
+<h2 class="page-title">Reports</h2>
+
+
+<!-- ================= FILTERS ================= -->
+
+<div class="filters-card">
+
+<div class="filter-row">
+<input type="text" id="searchInput" placeholder="Search (Customer / Vendor / Tracking)">
+<select id="deliveryStatus">
+<option value="all">Delivery Status - All</option>
+<option value="Pending">Pending</option>
+<option value="Delivered">Delivered</option>
+</select>
+<select id="vendorPayment">
+<option value="all">Vendor Payment - All</option>
+<option value="Paid">Paid</option>
+<option value="Pending">Pending</option>
+</select>
+</div>
+
+<div class="filter-row">
+<div class="quick-date-buttons">
+<button onclick="setQuickDate(7)">Last 7 days</button>
+<button onclick="setQuickDate(30)">Last 30 days</button>
+<button onclick="clearDateFilter()">All</button>
+</div>
+<div class="date-range">
+<input type="date" id="fromDate">
+<input type="date" id="toDate">
+</div>
+</div>
+
+</div>
+
+<!-- ================= TABLE ================= -->
+
+<div class="table-wrapper">
+<table class="report-table">
+<thead>
+<tr>
+<th>Order ID</th>
+<th>Date</th>
+<th>Customer</th>
+<th>Amount</th>
+<th>Profit</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="ordersTableBody"></tbody>
+</table>
+</div>
+
+</section>
+
+<script>
+
+
+
+/* ================= LOAD ORDERS ================= */
+
+function loadOrders(){
+
+const orders = JSON.parse(localStorage.getItem("orders") || "[]");
+const tableBody = document.getElementById("ordersTableBody");
+
+const search = document.getElementById("searchInput").value.toLowerCase();
+const deliveryFilter = document.getElementById("deliveryStatus").value;
+const vendorFilter = document.getElementById("vendorPayment").value;
+const from = document.getElementById("fromDate").value;
+const to = document.getElementById("toDate").value;
+
+tableBody.innerHTML="";
+
+orders.forEach((order,index)=>{
+
+const matchesSearch =
+(order.customer || "").toLowerCase().includes(search) ||
+(order.vendor || "").toLowerCase().includes(search) ||
+(order.tracking || "").toLowerCase().includes(search);
+
+const matchesDelivery =
+deliveryFilter==="all" || order.deliveryStatus===deliveryFilter;
+
+const matchesVendor =
+vendorFilter==="all" || order.vendorStatus===vendorFilter;
+
+const matchesDate =
+(!from || order.date>=from) &&
+(!to || order.date<=to);
+
+if(!(matchesSearch && matchesDelivery && matchesVendor && matchesDate)) return;
+
+const row = `
+<tr onclick="toggleDetails(${index})" style="cursor:pointer;">
+<td>${order.orderId}</td>
+<td>${order.date}</td>
+<td>${order.customer}</td>
+<td>₹${order.custAmount}</td>
+<td style="color:${order.profit>=0?'green':'red'};font-weight:bold;">
+₹${order.profit}
+</td>
+<td>${order.deliveryStatus}</td>
+</tr>
+
+<tr id="details-${index}" style="display:none;">
+<td colspan="6">
+<div class="details-box">
+
+<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+
+<div><b>Item:</b> ${order.item || "-"}</div>
+<div><b>Contact:</b> ${order.contact || "-"}</div>
+
+<div><b>Vendor:</b> ${order.vendor || "-"}</div>
+<div><b>Courier:</b> ${order.courier || "-"}</div>
+
+<div><b>Tracking:</b> ${order.tracking || "-"}</div>
+<div><b>Delivery:</b> ${order.deliveryStatus || "-"}</div>
+
+<div><b>Address:</b>
+${order.addressLine1 || ""}<br>
+${order.addressLine2 || ""}<br>
+${order.city || ""} - ${order.pincode || ""}<br>
+${order.state || ""}
+</div>
+
+<div><b>Expense:</b> ₹${order.expenseAmount || 0}</div>
+
+</div>
+
+<hr>
+
+<div class="action-buttons">
+<button class="btn-edit" onclick="event.stopPropagation();editOrder(${index})">Edit</button>
+<button class="btn-delete" onclick="event.stopPropagation();deleteOrder(${index})">Delete</button>
+${getQuickButton(order,index)}
+<button class="btn-print" onclick="event.stopPropagation();window.open('label.html?index=${index}','_blank')">Print</button>
+<button class="btn-wa" onclick="event.stopPropagation();sendOrderConfirmation(${index})">WA</button>
+</div>
+
+</div>
+</td>
+</tr>
+`;
+
+tableBody.innerHTML+=row;
+
+});
+
+}
+
+
+/* ================= FUNCTIONS ================= */
+
+function toggleDetails(index){
+const row=document.getElementById("details-"+index);
+row.style.display=row.style.display==="none"?"table-row":"none";
+}
+
+function editOrder(index){
+localStorage.setItem("editIndex",index);
+window.location.href="orders.html";
+}
+
+function deleteOrder(index){
+const orders=JSON.parse(localStorage.getItem("orders")||"[]");
+if(confirm("Delete this order?")){
+orders.splice(index,1);
+localStorage.setItem("orders",JSON.stringify(orders));
+loadOrders();
+}
+}
+
+function getQuickButton(order,index){
+
+if(order.vendorStatus!=="Paid"){
+return `<button class="btn-vendor" onclick="event.stopPropagation();markVendorPaid(${index})">Vendor Paid</button>`;
+}
+
+if(!order.shipped){
+return `<button class="btn-ship" onclick="event.stopPropagation();markShipped(${index});sendTrackingMessage(${index});">Mark Shipped</button>`;
+}
+
+if(order.deliveryStatus!=="Delivered"){
+return `<button class="btn-deliver" onclick="event.stopPropagation();markDelivered(${index})">Mark Delivered</button>`;
+}
+
+return `<span style="color:green;font-weight:bold;">Delivered</span>`;
+}
+
+function markVendorPaid(index){
+const orders=JSON.parse(localStorage.getItem("orders")||"[]");
+orders[index].vendorStatus="Paid";
+localStorage.setItem("orders",JSON.stringify(orders));
+loadOrders();
+}
+
+function markShipped(index){
+const orders=JSON.parse(localStorage.getItem("orders")||"[]");
+orders[index].shipped=true;
+localStorage.setItem("orders",JSON.stringify(orders));
+loadOrders();
+}
+
+function markDelivered(index){
+const orders=JSON.parse(localStorage.getItem("orders")||"[]");
+orders[index].deliveryStatus="Delivered";
+localStorage.setItem("orders",JSON.stringify(orders));
+loadOrders();
+}
+
+/* ================= FILTER EVENTS ================= */
+
+document.getElementById("searchInput").addEventListener("input",loadOrders);
+document.getElementById("deliveryStatus").addEventListener("change",loadOrders);
+document.getElementById("vendorPayment").addEventListener("change",loadOrders);
+document.getElementById("fromDate").addEventListener("change",loadOrders);
+document.getElementById("toDate").addEventListener("change",loadOrders);
+
+loadOrders();
+
+</script>
+
+</body>
+</html>

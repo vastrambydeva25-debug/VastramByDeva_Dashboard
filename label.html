@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shipping Label | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="label-page" style="display:flex; justify-content:center; align-items:center; min-height:100vh;">
+
+  <div class="label-container" style="margin:auto;">
+    <img src="assets/Vastram_logo.png" class="logo" alt="Vastram">
+    <div class="brand-name">Vastram By Deva</div>
+
+    <div class="order-id-badge">
+      🆔 Order ID: <span id="orderId">-</span>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📦 Shipping To</div>
+      <p><strong>Name:</strong> <span id="customer">-</span></p>
+      <p><strong>Phone:</strong> <span id="contact">-</span></p>
+      <p><strong>Address:</strong></p>
+      <div id="address" style="line-height:1.5; font-size:13px;"></div>
+    </div>
+
+    <button class="btn btn-dark no-print" onclick="window.print()" style="margin-top:16px;">🖨️ Print Label</button>
+    <button class="btn btn-outline no-print" onclick="window.close()" style="margin-top:8px;">Close</button>
+  </div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { doc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+
+if (id) {
+  getDoc(doc(db, "orders", id)).then(snap => {
+    if (snap.exists()) {
+      const o = snap.data();
+    document.getElementById("orderId").textContent = o.orderId || "-";
+    document.getElementById("customer").textContent = o.customer || "-";
+    document.getElementById("contact").textContent = o.contact || "-";
+
+    const addressParts = [
+      o.addressLine1, o.addressLine2,
+      o.city && o.pincode ? `${o.city} - ${o.pincode}` : o.city || "",
+      o.state
+    ].filter(Boolean);
+    document.getElementById("address").innerHTML = addressParts.join("<br>");
+    }
+  }).catch(e => console.error("Label load error:", e));
+}
+</script>
+</body>
+</html>

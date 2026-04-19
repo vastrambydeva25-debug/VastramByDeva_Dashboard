@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customers | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Customers</h2>
+      <div class="page-subtitle">All your customers, aggregated from orders.</div>
+    </div>
+    <div>
+      <input type="text" id="searchCustomer" placeholder="🔍 Search customer..." style="padding:10px 16px; border:1px solid rgba(0,0,0,.1); border-radius:8px; font-size:14px; font-family:inherit;">
+    </div>
+  </div>
+
+  <div class="loading-spinner" id="loadingState">
+    <div class="spinner-ring"></div>
+    Loading customers...
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="stats-grid" id="custStats" style="display:none;">
+    <div class="stat-card">
+      <div class="stat-label">Total Customers</div>
+      <div class="stat-value" id="totalCust">0</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Repeat Customers</div>
+      <div class="stat-value" id="repeatCust">0</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-label">Total Revenue</div>
+      <div class="stat-value">₹<span id="custRevenue">0</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Order Value</div>
+      <div class="stat-value">₹<span id="avgOrder">0</span></div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER CARDS -->
+  <div class="customer-list" id="customerList"></div>
+
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="empty-icon">👥</div>
+    <div>No customers found.</div>
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { requireAuth } from "./js/auth-guard.js";
+import { renderNav } from "./js/nav.js";
+import { getOrders } from "./js/data-cache.js";
+import { collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+renderNav("customers");
+
+let customerData = [];
+
+async function init() {
+  try {
+    await requireAuth();
+    await loadCustomers();
+  } catch(e) {
+    console.error("Customers init error:", e);
+  }
+}
+
+async function loadCustomers() {
+  const allOrders = await getOrders();
+  const map = {};
+
+  allOrders.forEach(o => {
+    const name = (o.customer || "").trim();
+    if (!name) return;
+
+    if (!map[name]) {
+      map[name] = {
+        name,
+        contact: o.contact || "",
+        city: o.city || "",
+        state: o.state || "",
+        orders: 0,
+        revenue: 0,
+        lastOrder: "",
+        lastStatus: ""
+      };
+    }
+
+    map[name].orders++;
+    map[name].revenue += Number(o.custAmount) || 0;
+    if (o.date > map[name].lastOrder) {
+      map[name].lastOrder = o.date;
+      map[name].lastStatus = o.deliveryStatus || "Pending";
+    }
+    if (!map[name].contact && o.contact) map[name].contact = o.contact;
+    if (!map[name].city && o.city) map[name].city = o.city;
+  });
+
+  customerData = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+
+  // Summary
+  const totalRevenue = customerData.reduce((s, c) => s + c.revenue, 0);
+  const totalOrders = customerData.reduce((s, c) => s + c.orders, 0);
+  document.getElementById("totalCust").textContent = customerData.length;
+  document.getElementById("repeatCust").textContent = customerData.filter(c => c.orders > 1).length;
+  document.getElementById("custRevenue").textContent = totalRevenue.toLocaleString("en-IN");
+  document.getElementById("avgOrder").textContent = totalOrders > 0
+    ? Math.round(totalRevenue / totalOrders).toLocaleString("en-IN") : "0";
+
+  document.getElementById("loadingState").style.display = "none";
+  document.getElementById("custStats").style.display = "grid";
+  renderCustomers();
+}
+
+function renderCustomers(filter = "") {
+  const list = document.getElementById("customerList");
+  const filtered = customerData.filter(c =>
+    c.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  if (filtered.length === 0) {
+    list.innerHTML = "";
+    document.getElementById("emptyState").style.display = "block";
+    return;
+  }
+  document.getElementById("emptyState").style.display = "none";
+
+  list.innerHTML = filtered.map(c => {
+    const statusClass = (c.lastStatus || "Pending") === "Delivered" ? "delivered"
+      : c.lastStatus === "Shipped" ? "shipped"
+      : c.lastStatus === "Returned" ? "returned" : "pending";
+    const phone = (c.contact || "").replace(/\D/g, "");
+    const waLink = phone ? `https://wa.me/91${phone.slice(-10)}` : "#";
+
+    return `
+    <div class="customer-card" style="position:relative;">
+      <span class="badge badge-${statusClass}" style="position:absolute; top:12px; right:12px; font-size:11px;">
+        ${c.lastStatus || "Pending"}
+      </span>
+      <div class="customer-name">${c.name}</div>
+      <div class="customer-meta">
+        📞 <a href="tel:${c.contact}" style="color:var(--maroon); font-weight:600;">${c.contact || "N/A"}</a>
+        ${phone ? `<a href="${waLink}" target="_blank" title="Chat on WhatsApp" style="margin-left:6px; text-decoration:none; vertical-align:middle;"><img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" width="22" height="22" style="vertical-align:middle;"></a>` : ""}
+        &nbsp;•&nbsp; 📍 ${[c.city, c.state].filter(Boolean).join(", ") || "N/A"}
+      </div>
+      <div class="customer-stats">
+        <div>Orders<strong>${c.orders}</strong></div>
+        <div>Revenue<strong>₹${c.revenue.toLocaleString("en-IN")}</strong></div>
+        <div>Last Order<strong>${c.lastOrder || "N/A"}</strong></div>
+        <div>Avg Value<strong>₹${c.orders > 0 ? Math.round(c.revenue / c.orders).toLocaleString("en-IN") : 0}</strong></div>
+      </div>
+    </div>
+  `}).join("");
+}
+
+document.getElementById("searchCustomer").addEventListener("input", (e) => {
+  renderCustomers(e.target.value);
+});
+
+init();
+</script>
+</body>
+</html>

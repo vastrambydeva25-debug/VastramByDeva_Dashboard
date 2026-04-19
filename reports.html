@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reports | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Reports</h2>
+      <div class="page-subtitle">View, search, filter, and manage all your orders.</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-outline" id="btnExcel">📥 Excel</button>
+      <button class="btn btn-outline" id="btnPDF">📄 PDF</button>
+      <button class="btn btn-primary" onclick="window.location.href='orders.html'">➕ New Order</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY ROW -->
+  <div class="stats-grid" id="summaryStats">
+    <div class="stat-card"><div class="stat-label">Filtered Orders</div><div class="stat-value" id="fTotal">0</div></div>
+    <div class="stat-card gold"><div class="stat-label">Revenue</div><div class="stat-value">₹<span id="fRevenue">0</span></div></div>
+    <div class="stat-card red"><div class="stat-label">Expense</div><div class="stat-value">₹<span id="fExpense">0</span></div></div>
+    <div class="stat-card green"><div class="stat-label">Profit</div><div class="stat-value">₹<span id="fProfit">0</span></div></div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-bar">
+    <input type="text" id="searchInput" placeholder="🔍 Search customer, vendor, tracking...">
+    <select id="deliveryFilter">
+      <option value="all">All Deliveries</option>
+      <option value="Pending">Pending</option>
+      <option value="Shipped">Shipped</option>
+      <option value="Delivered">Delivered</option>
+      <option value="Returned">Returned</option>
+    </select>
+    <select id="vendorFilter">
+      <option value="all">All Vendor Payments</option>
+      <option value="Paid">Paid</option>
+      <option value="Pending">Pending</option>
+    </select>
+    <select id="categoryFilter">
+      <option value="all">All Categories</option>
+      <option value="Saree">Saree</option>
+      <option value="Dress">Dress</option>
+      <option value="Lehenga">Lehenga</option>
+      <option value="Kurti">Kurti</option>
+      <option value="Other">Other</option>
+    </select>
+    <div class="quick-btns">
+      <button onclick="setQuickDate(7)">7 days</button>
+      <button onclick="setQuickDate(30)">30 days</button>
+      <button onclick="setQuickDate(90)">90 days</button>
+      <button onclick="clearDateFilter()">All</button>
+    </div>
+    <input type="date" id="fromDate">
+    <input type="date" id="toDate">
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Profit</th>
+          <th>Delivery</th>
+          <th>Vendor</th>
+        </tr>
+      </thead>
+      <tbody id="ordersTableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-icon">📋</div>
+      <div>No orders found. Adjust your filters or create a new order.</div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-spinner" id="loadingState">
+    <div class="spinner-ring"></div>
+    Loading orders...
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { requireAuth } from "./js/auth-guard.js";
+import { renderNav } from "./js/nav.js";
+import { showToast } from "./js/toast.js";
+import { exportToExcel, exportToPDF } from "./js/print.js";
+import { sendOrderConfirmation, sendTrackingMessage, sendDeliveryMessage } from "./js/whatsapp.js";
+import { getOrders, invalidateCache } from "./js/data-cache.js";
+import { collection, getDocs, doc, updateDoc, deleteDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+renderNav("reports");
+
+let allOrders = [];
+
+async function init() {
+  try {
+    await requireAuth();
+    await fetchOrders();
+  } catch(e) {
+    console.error("Reports init error:", e);
+    document.getElementById("loadingState").innerHTML =
+      '<div style="color:red;">Error loading. Check console.</div>';
+  }
+}
+
+// ============ LOAD ALL ORDERS FROM CACHE ============
+async function fetchOrders() {
+  allOrders = await getOrders();
+  allOrders.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  document.getElementById("loadingState").style.display = "none";
+  renderOrders();
+}
+
+// ============ RENDER FILTERED ORDERS ============
+function renderOrders() {
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const deliveryF = document.getElementById("deliveryFilter").value;
+  const vendorF = document.getElementById("vendorFilter").value;
+  const categoryF = document.getElementById("categoryFilter").value;
+  const from = document.getElementById("fromDate").value;
+  const to = document.getElementById("toDate").value;
+
+  const filtered = allOrders.filter(o => {
+    const matchSearch =
+      (o.customer || "").toLowerCase().includes(search) ||
+      (o.vendor || "").toLowerCase().includes(search) ||
+      (o.tracking || "").toLowerCase().includes(search) ||
+      (o.orderId || "").toLowerCase().includes(search);
+    const matchDelivery = deliveryF === "all" || o.deliveryStatus === deliveryF;
+    const matchVendor = vendorF === "all" || o.vendorStatus === vendorF;
+    const matchCategory = categoryF === "all" || o.category === categoryF;
+    const matchFrom = !from || (o.date || "") >= from;
+    const matchTo = !to || (o.date || "") <= to;
+    return matchSearch && matchDelivery && matchVendor && matchCategory && matchFrom && matchTo;
+  });
+
+  // Summary stats
+  let fRevenue = 0, fExpense = 0, fProfit = 0;
+  filtered.forEach(o => {
+    fRevenue += Number(o.custAmount) || 0;
+    const v = Number(o.vendorAmount) || 0;
+    const e = Number(o.expenseAmount) || 0;
+    fExpense += v + e;
+    fProfit += (Number(o.custAmount) || 0) - v - e;
+  });
+  document.getElementById("fTotal").textContent = filtered.length;
+  document.getElementById("fRevenue").textContent = fRevenue.toLocaleString("en-IN");
+  document.getElementById("fExpense").textContent = fExpense.toLocaleString("en-IN");
+  document.getElementById("fProfit").textContent = fProfit.toLocaleString("en-IN");
+
+  const tbody = document.getElementById("ordersTableBody");
+  const emptyState = document.getElementById("emptyState");
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+
+  tbody.innerHTML = filtered.map((o, i) => `
+    <tr onclick="toggleDetails('${o._id}')">
+      <td style="font-weight:600; font-size:12px;">${o.orderId || "-"}</td>
+      <td>${o.date || "-"}</td>
+      <td>${o.customer || "-"}</td>
+      <td>₹${(o.custAmount || 0).toLocaleString("en-IN")}</td>
+      <td style="color:${(o.profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">
+        ₹${(o.profit || 0).toLocaleString("en-IN")}
+        <small style="opacity:.6; font-weight:400;">(${o.custAmount ? Math.round(((o.profit || 0) / o.custAmount) * 100) : 0}%)</small>
+      </td>
+      <td><span class="badge badge-${(o.deliveryStatus || 'pending').toLowerCase()}">${o.deliveryStatus || "Pending"}</span></td>
+      <td><span class="badge ${o.vendorStatus === 'Paid' ? 'badge-paid' : 'badge-pending'}">${o.vendorStatus || "Pending"}</span></td>
+    </tr>
+    <tr id="details-${o._id}" style="display:none;">
+      <td colspan="7">
+        <div class="details-box">
+          <div class="details-grid">
+            <div><b>Item:</b> ${o.item || "-"}</div>
+            <div><b>Category:</b> ${o.category || "-"}</div>
+            <div><b>Contact:</b> ${o.contact || "-"}</div>
+            <div><b>Vendor:</b> ${o.vendor || "-"}</div>
+            <div><b>Courier:</b> ${o.courier || "-"}</div>
+            <div><b>Tracking:</b> ${o.tracking || "-"}</div>
+            <div><b>Vendor Amount:</b> ₹${o.vendorAmount || 0}</div>
+            <div><b>Expense:</b> ₹${o.expenseAmount || 0} ${o.expenseType ? '(' + o.expenseType + ')' : ''}</div>
+            <div><b>Payment Mode:</b> ${o.custMode || "-"} → ${o.custAccount || "-"}</div>
+            <div style="grid-column: span 2;">
+              <b>Address:</b>
+              ${[o.addressLine1, o.addressLine2, o.city, o.state, o.pincode].filter(Boolean).join(", ") || "-"}
+            </div>
+            ${o.notes ? `<div style="grid-column: span 2;"><b>Notes:</b> ${o.notes}</div>` : ""}
+          </div>
+          <div class="action-buttons">
+            <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editOrder('${o._id}')">✏️ Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteOrder('${o._id}')">🗑️ Delete</button>
+            <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();duplicateOrder('${o._id}')">📋 Duplicate</button>
+            ${getQuickAction(o)}
+            <button class="btn btn-sm btn-dark" onclick="event.stopPropagation();window.open('label.html?id=${o._id}','_blank')">🖨️ Print</button>
+            <button class="btn btn-sm btn-wa" onclick="event.stopPropagation();waConfirm('${o._id}')">📱 WhatsApp</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function getQuickAction(o) {
+  if (o.vendorStatus !== "Paid") {
+    return `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markVendorPaid('${o._id}')">💰 Vendor Paid</button>`;
+  }
+  if (o.deliveryStatus === "Pending") {
+    return `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markShipped('${o._id}')">🚚 Mark Shipped</button>`;
+  }
+  if (o.deliveryStatus === "Shipped") {
+    return `<button class="btn btn-sm btn-success" onclick="event.stopPropagation();markDelivered('${o._id}')">✅ Mark Delivered</button>`;
+  }
+  if (o.deliveryStatus === "Delivered") {
+    return `<span class="badge badge-delivered">✅ Delivered</span>`;
+  }
+  return "";
+}
+
+// ============ ACTIONS ============
+window.toggleDetails = function(id) {
+  const row = document.getElementById("details-" + id);
+  row.style.display = row.style.display === "none" ? "table-row" : "none";
+};
+
+window.editOrder = function(id) {
+  sessionStorage.setItem("editOrderId", id);
+  window.location.href = "orders.html";
+};
+
+window.duplicateOrder = function(id) {
+  sessionStorage.setItem("duplicateOrderId", id);
+  sessionStorage.removeItem("editOrderId");
+  window.location.href = "orders.html";
+};
+
+window.deleteOrder = async function(id) {
+  if (!confirm("Are you sure you want to delete this order?")) return;
+  try {
+    await deleteDoc(doc(db, "orders", id));
+    invalidateCache();
+    showToast("Order deleted");
+    allOrders = allOrders.filter(o => o._id !== id);
+    renderOrders();
+  } catch (e) {
+    showToast("Error deleting order", "error");
+  }
+};
+
+window.markVendorPaid = async function(id) {
+  await updateDoc(doc(db, "orders", id), { vendorStatus: "Paid" });
+  invalidateCache();
+  const order = allOrders.find(o => o._id === id);
+  if (order) order.vendorStatus = "Paid";
+  showToast("Vendor marked as Paid ✅");
+  renderOrders();
+};
+
+window.markShipped = async function(id) {
+  await updateDoc(doc(db, "orders", id), { deliveryStatus: "Shipped" });
+  invalidateCache();
+  const order = allOrders.find(o => o._id === id);
+  if (order) {
+    order.deliveryStatus = "Shipped";
+    sendTrackingMessage(order);
+  }
+  showToast("Marked as Shipped 🚚");
+  renderOrders();
+};
+
+window.markDelivered = async function(id) {
+  await updateDoc(doc(db, "orders", id), { deliveryStatus: "Delivered" });
+  invalidateCache();
+  const order = allOrders.find(o => o._id === id);
+  if (order) {
+    order.deliveryStatus = "Delivered";
+    sendDeliveryMessage(order);
+  }
+  showToast("Marked as Delivered ✅");
+  renderOrders();
+};
+
+window.waConfirm = function(id) {
+  const order = allOrders.find(o => o._id === id);
+  if (order) sendOrderConfirmation(order);
+};
+
+// ============ FILTERS ============
+window.setQuickDate = function(days) {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - days);
+  document.getElementById("fromDate").value = from.toISOString().split("T")[0];
+  document.getElementById("toDate").value = to.toISOString().split("T")[0];
+  renderOrders();
+};
+
+window.clearDateFilter = function() {
+  document.getElementById("fromDate").value = "";
+  document.getElementById("toDate").value = "";
+  renderOrders();
+};
+
+["searchInput", "deliveryFilter", "vendorFilter", "categoryFilter", "fromDate", "toDate"].forEach(id => {
+  document.getElementById(id).addEventListener(id === "searchInput" ? "input" : "change", renderOrders);
+});
+
+// Export
+document.getElementById("btnExcel").addEventListener("click", async () => {
+  showToast("Generating Excel... ⏳", "info");
+  await exportToExcel(allOrders);
+  showToast("Excel exported 📥", "info");
+});
+document.getElementById("btnPDF").addEventListener("click", async () => {
+  showToast("Generating PDF... ⏳", "info");
+  await exportToPDF(allOrders);
+  showToast("PDF exported �", "info");
+});
+
+// Load!
+init();
+</script>
+</body>
+</html>

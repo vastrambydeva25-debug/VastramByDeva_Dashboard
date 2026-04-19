@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--maroon), var(--deep));
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .welcome-banner h1 {
+      font-size: 28px;
+      color: var(--gold);
+    }
+    .welcome-banner p {
+      margin: 6px 0 0;
+      opacity: .8;
+      font-size: 14px;
+    }
+    .welcome-banner .welcome-logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,.2);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .action-card {
+      background: var(--card);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      color: var(--text);
+    }
+    .action-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--gold);
+    }
+    .action-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    .action-label {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--maroon);
+    }
+    .action-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .alerts-section h3 {
+      color: var(--maroon);
+      margin-bottom: 14px;
+      font-size: 18px;
+    }
+
+    .alert-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      box-shadow: var(--shadow-sm);
+      font-size: 14px;
+    }
+    .alert-item .alert-icon { font-size: 22px; flex-shrink: 0; }
+    .alert-item .alert-text { flex: 1; }
+    .alert-item .alert-count {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--maroon);
+    }
+    .alert-item.urgent { border-left: 4px solid var(--danger); }
+    .alert-item.warning { border-left: 4px solid var(--warning); }
+    .alert-item.info { border-left: 4px solid var(--info); }
+    .alert-item.good { border-left: 4px solid var(--success); }
+
+    .today-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 30px;
+    }
+    .today-card {
+      background: var(--card);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: var(--radius);
+      padding: 18px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .today-card .today-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--maroon);
+    }
+    .today-card .today-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .welcome-banner { padding: 24px 20px; }
+      .welcome-banner h1 { font-size: 22px; }
+      .quick-actions { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- WELCOME BANNER -->
+  <div class="welcome-banner">
+    <div>
+      <h1>Welcome back! 🙏</h1>
+      <p id="dateDisplay"></p>
+    </div>
+    <img src="assets/Vastram_logo.png" class="welcome-logo" alt="Vastram">
+  </div>
+
+  <!-- TODAY'S SNAPSHOT -->
+  <h3 style="color:var(--maroon); margin-bottom:14px;">📅 Today's Snapshot</h3>
+  <div class="today-summary">
+    <div class="today-card">
+      <div class="today-num" id="todayOrders">0</div>
+      <div class="today-label">Orders Today</div>
+    </div>
+    <div class="today-card">
+      <div class="today-num" id="todayRevenue" style="color:var(--gold);">₹0</div>
+      <div class="today-label">Revenue Today</div>
+    </div>
+    <div class="today-card">
+      <div class="today-num" id="todayProfit" style="color:var(--success);">₹0</div>
+      <div class="today-label">Profit Today</div>
+    </div>
+    <div class="today-card">
+      <div class="today-num" id="totalAll">0</div>
+      <div class="today-label">All-time Orders</div>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <h3 style="color:var(--maroon); margin-bottom:14px;">⚡ Quick Actions</h3>
+  <div class="quick-actions">
+    <a class="action-card" href="orders.html">
+      <div class="action-icon">➕</div>
+      <div class="action-label">New Order</div>
+      <div class="action-desc">Create a new order</div>
+    </a>
+    <a class="action-card" href="reports.html">
+      <div class="action-icon">📋</div>
+      <div class="action-label">View Reports</div>
+      <div class="action-desc">All orders & filters</div>
+    </a>
+    <a class="action-card" href="dashboard.html">
+      <div class="action-icon">📊</div>
+      <div class="action-label">Analytics</div>
+      <div class="action-desc">Charts & insights</div>
+    </a>
+    <a class="action-card" href="customers.html">
+      <div class="action-icon">👥</div>
+      <div class="action-label">Customers</div>
+      <div class="action-desc">Customer directory</div>
+    </a>
+    <a class="action-card" href="vendors.html">
+      <div class="action-icon">🏪</div>
+      <div class="action-label">Vendors</div>
+      <div class="action-desc">Vendor payments</div>
+    </a>
+  </div>
+
+  <!-- ALERTS / REMINDERS -->
+  <div class="alerts-section">
+    <h3>🔔 Alerts & Reminders</h3>
+    <div class="alert-list" id="alertList">
+      <div class="loading-spinner" id="loadingState">
+        <div class="spinner-ring"></div>
+        Loading...
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { requireAuth } from "./js/auth-guard.js";
+import { renderNav } from "./js/nav.js";
+import { getOrders } from "./js/data-cache.js";
+import { collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+renderNav("home");
+
+// Display date
+const now = new Date();
+document.getElementById("dateDisplay").textContent =
+  now.toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+async function init() {
+  try {
+    await requireAuth();
+    await loadHomeData();
+  } catch(e) {
+    console.error("Home error:", e);
+    document.getElementById("loadingState").innerHTML =
+      `<div style="color:red;">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadHomeData() {
+  const allOrdersRaw = await getOrders();
+  const today = new Date().toISOString().split("T")[0];
+
+  let todayOrders = 0, todayRevenue = 0, todayProfit = 0, totalAll = 0;
+  let pendingDeliveries = 0, vendorDue = 0, vendorDueAmount = 0;
+  let returnedOrders = 0, shippedOrders = 0;
+
+  allOrdersRaw.forEach(o => {
+    totalAll++;
+
+    const r = Number(o.custAmount) || 0;
+    const v = Number(o.vendorAmount) || 0;
+    const e = Number(o.expenseAmount) || 0;
+
+    if (o.date === today) {
+      todayOrders++;
+      todayRevenue += r;
+      todayProfit += (r - v - e);
+    }
+
+    const status = o.deliveryStatus || "Pending";
+    if (status === "Pending") pendingDeliveries++;
+    if (status === "Shipped") shippedOrders++;
+    if (status === "Returned") returnedOrders++;
+
+    if (o.vendorStatus !== "Paid") {
+      vendorDue++;
+      vendorDueAmount += v;
+    }
+  });
+
+  // Today's snapshot
+  document.getElementById("todayOrders").textContent = todayOrders;
+  document.getElementById("todayRevenue").textContent = "₹" + todayRevenue.toLocaleString("en-IN");
+  document.getElementById("todayProfit").textContent = "₹" + todayProfit.toLocaleString("en-IN");
+  document.getElementById("totalAll").textContent = totalAll;
+
+  // Build alerts
+  const alerts = [];
+
+  if (pendingDeliveries > 0) {
+    alerts.push({
+      icon: "📦", text: `<b>${pendingDeliveries}</b> orders pending delivery`,
+      type: "warning", count: pendingDeliveries,
+      action: "reports.html"
+    });
+  }
+
+  if (shippedOrders > 0) {
+    alerts.push({
+      icon: "🚚", text: `<b>${shippedOrders}</b> orders in transit`,
+      type: "info", count: shippedOrders,
+      action: "reports.html"
+    });
+  }
+
+  if (vendorDue > 0) {
+    alerts.push({
+      icon: "💰", text: `<b>${vendorDue}</b> vendor payments pending (₹${vendorDueAmount.toLocaleString("en-IN")})`,
+      type: "urgent", count: vendorDue,
+      action: "vendors.html"
+    });
+  }
+
+  if (returnedOrders > 0) {
+    alerts.push({
+      icon: "↩️", text: `<b>${returnedOrders}</b> returned orders to handle`,
+      type: "urgent", count: returnedOrders,
+      action: "reports.html"
+    });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      icon: "✅", text: "All clear! No pending actions.",
+      type: "good", count: "",
+      action: null
+    });
+  }
+
+  const alertList = document.getElementById("alertList");
+  alertList.innerHTML = alerts.map(a => `
+    <div class="alert-item ${a.type}" ${a.action ? `onclick="window.location.href='${a.action}'" style="cursor:pointer;"` : ""}>
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-text">${a.text}</div>
+      ${a.count ? `<div class="alert-count">${a.count}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+init();
+</script>
+</body>
+</html>

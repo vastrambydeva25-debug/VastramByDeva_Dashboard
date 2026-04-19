@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vendors | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Vendors</h2>
+      <div class="page-subtitle">Track vendor payments and performance.</div>
+    </div>
+    <input type="text" id="searchVendor" placeholder="🔍 Search vendor..."
+      style="padding:10px 16px; border:1px solid rgba(0,0,0,.1); border-radius:8px; font-size:14px; font-family:inherit;">
+  </div>
+
+  <div class="loading-spinner" id="loadingState">
+    <div class="spinner-ring"></div>
+    Loading vendors...
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="stats-grid" id="vendorStats" style="display:none;">
+    <div class="stat-card">
+      <div class="stat-label">Total Vendors</div>
+      <div class="stat-value" id="totalVendors">0</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-label">Total Paid to Vendors</div>
+      <div class="stat-value">₹<span id="totalPaid">0</span></div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Pending Payments</div>
+      <div class="stat-value" id="pendingCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Pending Amount</div>
+      <div class="stat-value">₹<span id="pendingAmount">0</span></div>
+    </div>
+  </div>
+
+  <!-- VENDOR TABLE -->
+  <div class="table-wrapper" id="vendorTable" style="display:none;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Vendor</th>
+          <th>Contact</th>
+          <th>Orders</th>
+          <th>Total Amount</th>
+          <th>Paid</th>
+          <th>Pending</th>
+          <th>Avg Order</th>
+        </tr>
+      </thead>
+      <tbody id="vendorBody"></tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="empty-icon">🏪</div>
+    <div>No vendors found.</div>
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { requireAuth } from "./js/auth-guard.js";
+import { renderNav } from "./js/nav.js";
+import { getOrders } from "./js/data-cache.js";
+import { collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+renderNav("vendors");
+
+let vendorData = [];
+
+async function init() {
+  try {
+    await requireAuth();
+    await loadVendors();
+  } catch(e) {
+    console.error("Vendors init error:", e);
+    document.getElementById("loadingState").innerHTML =
+      `<div style="color:red;">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadVendors() {
+  const allOrders = await getOrders();
+  const map = {};
+
+  allOrders.forEach(o => {
+    const name = (o.vendor || "").trim();
+    if (!name) return;
+
+    if (!map[name]) {
+      map[name] = {
+        name,
+        contact: o.vendorContact || "",
+        orders: 0,
+        totalAmount: 0,
+        paidAmount: 0,
+        pendingAmount: 0,
+        pendingCount: 0
+      };
+    }
+
+    const amt = Number(o.vendorAmount) || 0;
+    map[name].orders++;
+    map[name].totalAmount += amt;
+
+    if (o.vendorStatus === "Paid") {
+      map[name].paidAmount += amt;
+    } else {
+      map[name].pendingAmount += amt;
+      map[name].pendingCount++;
+    }
+
+    if (!map[name].contact && o.vendorContact) map[name].contact = o.vendorContact;
+  });
+
+  vendorData = Object.values(map).sort((a, b) => b.totalAmount - a.totalAmount);
+
+  // Summary
+  const totalPaid = vendorData.reduce((s, v) => s + v.paidAmount, 0);
+  const totalPending = vendorData.reduce((s, v) => s + v.pendingAmount, 0);
+  const pendingCount = vendorData.reduce((s, v) => s + v.pendingCount, 0);
+
+  document.getElementById("totalVendors").textContent = vendorData.length;
+  document.getElementById("totalPaid").textContent = totalPaid.toLocaleString("en-IN");
+  document.getElementById("pendingCount").textContent = pendingCount;
+  document.getElementById("pendingAmount").textContent = totalPending.toLocaleString("en-IN");
+
+  document.getElementById("loadingState").style.display = "none";
+  document.getElementById("vendorStats").style.display = "grid";
+  document.getElementById("vendorTable").style.display = "block";
+  renderVendors();
+}
+
+function renderVendors(filter = "") {
+  const filtered = vendorData.filter(v =>
+    v.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const tbody = document.getElementById("vendorBody");
+  const emptyState = document.getElementById("emptyState");
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+
+  tbody.innerHTML = filtered.map(v => `
+    <tr>
+      <td style="font-weight:700; color:var(--maroon);">${v.name}</td>
+      <td>${v.contact || "-"}</td>
+      <td>${v.orders}</td>
+      <td>₹${v.totalAmount.toLocaleString("en-IN")}</td>
+      <td style="color:var(--success); font-weight:600;">₹${v.paidAmount.toLocaleString("en-IN")}</td>
+      <td>
+        ${v.pendingAmount > 0
+          ? `<span style="color:var(--danger); font-weight:700;">₹${v.pendingAmount.toLocaleString("en-IN")}</span>
+             <span class="badge badge-pending" style="margin-left:6px;">${v.pendingCount} orders</span>`
+          : '<span class="badge badge-delivered">All Paid ✅</span>'}
+      </td>
+      <td>₹${v.orders > 0 ? Math.round(v.totalAmount / v.orders).toLocaleString("en-IN") : 0}</td>
+    </tr>
+  `).join("");
+}
+
+document.getElementById("searchVendor").addEventListener("input", (e) => {
+  renderVendors(e.target.value);
+});
+
+init();
+</script>
+</body>
+</html>

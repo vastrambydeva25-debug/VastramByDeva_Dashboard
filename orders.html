@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Order | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title" id="pageTitle">New Order</h2>
+      <div class="page-subtitle">Fill in order details. Profit is calculated automatically.</div>
+    </div>
+  </div>
+
+  <!-- ORDER DETAILS -->
+  <details class="card" open>
+    <summary><span>Order Details</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-3">
+        <div class="field">
+          <label>Order Date</label>
+          <input type="date" id="orderDate">
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="category">
+            <option value="Saree">Saree</option>
+            <option value="Dress">Dress</option>
+            <option value="Lehenga">Lehenga</option>
+            <option value="Kurti">Kurti</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Item Description</label>
+          <input type="text" id="itemDesc" placeholder="Cotton Saree - Blue Border">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- CUSTOMER DETAILS -->
+  <details class="card" open>
+    <summary><span>Customer Details</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-2">
+        <div class="field">
+          <label>Customer Name</label>
+          <input type="text" id="customerName" placeholder="Customer Name" list="customerSuggestions">
+          <datalist id="customerSuggestions"></datalist>
+        </div>
+        <div class="field">
+          <label>Contact</label>
+          <input type="text" id="customerContact" placeholder="+91 9XXXXXXXXX">
+        </div>
+      </div>
+      <div class="form-grid cols-2" style="margin-top:14px;">
+        <div class="field">
+          <label>Address Line 1</label>
+          <input type="text" id="addressLine1" placeholder="Address Line 1">
+        </div>
+        <div class="field">
+          <label>Address Line 2</label>
+          <input type="text" id="addressLine2" placeholder="Address Line 2">
+        </div>
+      </div>
+      <div class="form-grid cols-3" style="margin-top:14px;">
+        <div class="field">
+          <label>City</label>
+          <input type="text" id="city" placeholder="City">
+        </div>
+        <div class="field">
+          <label>State</label>
+          <input type="text" id="state" placeholder="State">
+        </div>
+        <div class="field">
+          <label>Pincode</label>
+          <input type="text" id="pincode" placeholder="Pincode">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- VENDOR DETAILS -->
+  <details class="card" open>
+    <summary><span>Vendor Details</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-2">
+        <div class="field">
+          <label>Vendor Name</label>
+          <input type="text" id="vendorName" placeholder="Vendor Name" list="vendorSuggestions">
+          <datalist id="vendorSuggestions"></datalist>
+        </div>
+        <div class="field">
+          <label>Vendor Contact</label>
+          <input type="text" id="vendorContact" placeholder="Phone / WhatsApp">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- DELIVERY & TRACKING -->
+  <details class="card" open>
+    <summary><span>Delivery & Tracking</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-3">
+        <div class="field">
+          <label>Courier Service</label>
+          <input type="text" id="courier" placeholder="DTDC / Delhivery / India Post">
+        </div>
+        <div class="field">
+          <label>Tracking Number</label>
+          <input type="text" id="tracking" placeholder="Tracking Number">
+        </div>
+        <div class="field">
+          <label>Delivery Status</label>
+          <select id="deliveryStatus">
+            <option value="Pending">Pending</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Returned">Returned</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- CUSTOMER PAYMENT -->
+  <details class="card" open>
+    <summary><span>Customer Payment</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-3">
+        <div class="field">
+          <label>Mode of Payment</label>
+          <select id="custMode">
+            <option value="UPI">UPI</option>
+            <option value="Cash">Cash</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="COD">COD</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Amount Received</label>
+          <input type="number" id="custAmount" value="0" min="0">
+        </div>
+        <div class="field">
+          <label>Received To Account</label>
+          <input type="text" id="custAccount" placeholder="UPI / HDFC / SBI">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- VENDOR PAYMENT -->
+  <details class="card" open>
+    <summary><span>Vendor Payment</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-4">
+        <div class="field">
+          <label>Vendor Amount</label>
+          <input type="number" id="vendorAmount" value="0" min="0">
+        </div>
+        <div class="field">
+          <label>Mode of Payment</label>
+          <select id="vendorMode">
+            <option value="UPI">UPI</option>
+            <option value="Cash">Cash</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Paid From Account</label>
+          <input type="text" id="vendorAccount" placeholder="HDFC / Cash / UPI">
+        </div>
+        <div class="field">
+          <label>Vendor Payment Status</label>
+          <select id="vendorStatus">
+            <option value="Pending">Pending</option>
+            <option value="Paid">Paid</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- OTHER EXPENSES -->
+  <details class="card" open>
+    <summary><span>Other Expenses</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="form-grid cols-2">
+        <div class="field">
+          <label>Expense Type</label>
+          <input type="text" id="expenseType" placeholder="Customization / Delivery / Return">
+        </div>
+        <div class="field">
+          <label>Expense Amount</label>
+          <input type="number" id="expenseAmount" value="0" min="0">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- NOTES -->
+  <details class="card">
+    <summary><span>Notes (Optional)</span><span class="chev">▾</span></summary>
+    <div class="card-body">
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="notes" placeholder="Any notes... (exchange request, extra delivery, etc.)"></textarea>
+      </div>
+    </div>
+  </details>
+
+  <!-- PROFIT + ACTIONS -->
+  <div class="profit-footer">
+    <div class="profit-display">
+      <div class="profit-label">Profit (Auto-calculated)</div>
+      <div class="profit-value">₹<span id="profitValue">0</span></div>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-maroon" id="btnSaveNext">💾 Save & Add Next</button>
+      <button class="btn btn-primary" id="btnSaveReports">📋 Save & Go Reports</button>
+      <button class="btn btn-outline" id="btnReset">↺ Reset</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { requireAuth } from "./js/auth-guard.js";
+import { renderNav } from "./js/nav.js";
+import { generateOrderId } from "./js/orderId.js";
+import { showToast } from "./js/toast.js";
+import { sendOrderConfirmation } from "./js/whatsapp.js";
+import { invalidateCache } from "./js/data-cache.js";
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+renderNav("orders");
+
+// ============ HELPERS ============
+function el(id) { return document.getElementById(id); }
+
+let editId = null;
+
+async function init() {
+  try {
+    await requireAuth();
+  } catch(e) {
+    console.error("Auth error:", e);
+    return;
+  }
+
+// Set default date to today
+el("orderDate").value = new Date().toISOString().split("T")[0];
+
+// ============ AUTO-SUGGEST CUSTOMERS & VENDORS ============
+async function loadSuggestions() {
+  const snapshot = await getDocs(collection(db, "orders"));
+  const customers = new Set();
+  const vendors = new Set();
+
+  snapshot.forEach(d => {
+    const o = d.data();
+    if (o.customer) customers.add(o.customer);
+    if (o.vendor) vendors.add(o.vendor);
+  });
+
+  const custList = el("customerSuggestions");
+  const vendList = el("vendorSuggestions");
+  customers.forEach(c => { custList.innerHTML += `<option value="${c}">`; });
+  vendors.forEach(v => { vendList.innerHTML += `<option value="${v}">`; });
+
+  // Auto-fill customer details when name is selected
+  el("customerName").addEventListener("change", () => {
+    const name = el("customerName").value;
+    snapshot.forEach(d => {
+      const o = d.data();
+      if (o.customer === name) {
+        if (!el("customerContact").value) el("customerContact").value = o.contact || "";
+        if (!el("addressLine1").value) el("addressLine1").value = o.addressLine1 || "";
+        if (!el("addressLine2").value) el("addressLine2").value = o.addressLine2 || "";
+        if (!el("city").value) el("city").value = o.city || "";
+        if (!el("state").value) el("state").value = o.state || "";
+        if (!el("pincode").value) el("pincode").value = o.pincode || "";
+      }
+    });
+  });
+
+  // Auto-fill vendor contact
+  el("vendorName").addEventListener("change", () => {
+    const name = el("vendorName").value;
+    snapshot.forEach(d => {
+      const o = d.data();
+      if (o.vendor === name && o.vendorContact) {
+        if (!el("vendorContact").value) el("vendorContact").value = o.vendorContact;
+      }
+    });
+  });
+}
+
+loadSuggestions();
+
+// ============ CHECK FOR EDIT MODE ============
+editId = sessionStorage.getItem("editOrderId");
+const dupId = sessionStorage.getItem("duplicateOrderId");
+const loadId = editId || dupId;
+
+if (loadId) {
+  if (editId) el("pageTitle").textContent = "Edit Order";
+  if (dupId) {
+    el("pageTitle").textContent = "Duplicate Order";
+    sessionStorage.removeItem("duplicateOrderId");
+  }
+  const editDoc = await getDoc(doc(db, "orders", loadId)).catch(e => { console.error(e); return null; });
+  if (editDoc && editDoc.exists()) {
+    const o = editDoc.data();
+    el("orderDate").value = o.date || "";
+    el("category").value = o.category || "Saree";
+    el("itemDesc").value = o.item || "";
+    el("customerName").value = o.customer || "";
+    el("customerContact").value = o.contact || "";
+    el("addressLine1").value = o.addressLine1 || "";
+    el("addressLine2").value = o.addressLine2 || "";
+    el("city").value = o.city || "";
+    el("state").value = o.state || "";
+    el("pincode").value = o.pincode || "";
+    el("vendorName").value = o.vendor || "";
+    el("vendorContact").value = o.vendorContact || "";
+    el("courier").value = o.courier || "";
+    el("tracking").value = o.tracking || "";
+    el("deliveryStatus").value = o.deliveryStatus || "Pending";
+    el("custMode").value = o.custMode || "UPI";
+    el("custAmount").value = o.custAmount || 0;
+    el("custAccount").value = o.custAccount || "";
+    el("vendorAmount").value = o.vendorAmount || 0;
+    el("vendorMode").value = o.vendorMode || "UPI";
+    el("vendorAccount").value = o.vendorAccount || "";
+    el("vendorStatus").value = o.vendorStatus || "Pending";
+    el("expenseType").value = o.expenseType || "";
+    el("expenseAmount").value = o.expenseAmount || 0;
+    el("notes").value = o.notes || "";
+    calculateProfit();
+  }
+  // For duplicate: clear editId so it creates a new order
+  if (dupId) editId = null;
+}
+
+} // end init()
+init();
+
+// ============ PROFIT CALCULATION ============
+function calculateProfit() {
+  const c = parseFloat(el("custAmount").value) || 0;
+  const v = parseFloat(el("vendorAmount").value) || 0;
+  const e = parseFloat(el("expenseAmount").value) || 0;
+  const profit = c - v - e;
+  el("profitValue").innerText = profit.toLocaleString("en-IN");
+  el("profitValue").style.color = profit >= 0 ? "var(--success)" : "var(--danger)";
+}
+
+["custAmount", "vendorAmount", "expenseAmount"].forEach(id =>
+  el(id).addEventListener("input", calculateProfit)
+);
+
+// ============ VALIDATION ============
+function validateForm() {
+  if (!el("customerName").value.trim()) {
+    showToast("Customer Name is required", "error");
+    el("customerName").focus();
+    return false;
+  }
+  if (!el("orderDate").value) {
+    showToast("Order Date is required", "error");
+    return false;
+  }
+  if ((parseFloat(el("custAmount").value) || 0) <= 0) {
+    showToast("Customer Amount must be greater than 0", "error");
+    return false;
+  }
+  return true;
+}
+
+// ============ SAVE ORDER ============
+async function saveOrder() {
+  if (!validateForm()) return false;
+
+  const custAmount = parseFloat(el("custAmount").value) || 0;
+  const vendorAmount = parseFloat(el("vendorAmount").value) || 0;
+  const expenseAmount = parseFloat(el("expenseAmount").value) || 0;
+
+  const orderData = {
+    date: el("orderDate").value,
+    category: el("category").value,
+    item: el("itemDesc").value,
+    customer: el("customerName").value.trim(),
+    contact: el("customerContact").value.trim(),
+    addressLine1: el("addressLine1").value,
+    addressLine2: el("addressLine2").value,
+    city: el("city").value,
+    state: el("state").value,
+    pincode: el("pincode").value,
+    vendor: el("vendorName").value,
+    vendorContact: el("vendorContact").value,
+    courier: el("courier").value,
+    tracking: el("tracking").value,
+    deliveryStatus: el("deliveryStatus").value,
+    custMode: el("custMode").value,
+    custAmount,
+    custAccount: el("custAccount").value,
+    vendorMode: el("vendorMode").value,
+    vendorAmount,
+    vendorAccount: el("vendorAccount").value,
+    vendorStatus: el("vendorStatus").value,
+    expenseType: el("expenseType").value,
+    expenseAmount,
+    profit: custAmount - vendorAmount - expenseAmount,
+    notes: el("notes").value,
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    if (editId) {
+      // Update existing order
+      await updateDoc(doc(db, "orders", editId), orderData);
+      invalidateCache();
+      sessionStorage.removeItem("editOrderId");
+      showToast("Order updated successfully ✅");
+    } else {
+      // Create new order
+      const orderId = await generateOrderId(orderData.customer, orderData.date);
+      orderData.orderId = orderId;
+      orderData.createdAt = new Date().toISOString();
+      await addDoc(collection(db, "orders"), orderData);
+      invalidateCache();
+      showToast("Order saved successfully ✅");
+    }
+    return true;
+  } catch (error) {
+    console.error("Save error:", error);
+    showToast("Error: " + error.message, "error");
+    return false;
+  }
+}
+
+// ============ RESET FORM ============
+function resetForm() {
+  document.querySelectorAll("input, textarea").forEach(i => {
+    if (i.type === "number") i.value = 0;
+    else if (i.type === "date") i.value = new Date().toISOString().split("T")[0];
+    else i.value = "";
+  });
+  document.querySelectorAll("select").forEach(s => s.selectedIndex = 0);
+  el("profitValue").innerText = "0";
+  sessionStorage.removeItem("editOrderId");
+  el("pageTitle").textContent = "New Order";
+}
+
+// ============ BUTTON EVENTS ============
+el("btnSaveNext").addEventListener("click", async () => {
+  const saved = await saveOrder();
+  if (saved) resetForm();
+});
+
+el("btnSaveReports").addEventListener("click", async () => {
+  const saved = await saveOrder();
+  if (saved) window.location.href = "reports.html";
+});
+
+el("btnReset").addEventListener("click", resetForm);
+</script>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>New Order | Vastram By Deva</title>
+
+  <!-- Use your existing CSS file if you have one -->
+  <!-- If your css is inside css/style.css, change path accordingly -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- If you don't have style.css changes yet, this page still works because
+       we include a premium UI CSS below (you can move it into style.css later). -->
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --stroke:#e9e6f5;
+      --text:#1f2430;
+      --muted:#6b7280;
+      --brand:#7b3fa0;
+      --brand2:#a855f7;
+      --gold:#c8a24d;
+      --shadow:0 14px 40px rgba(17, 24, 39, .08);
+      --radius:16px;
+    }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+    .page{ max-width:1200px; margin:0 auto; padding:24px 18px 40px; }
+
+    /* Header */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px; border-radius:18px; background:rgba(255,255,255,.75);
+      border:1px solid rgba(0,0,0,.05); box-shadow:0 8px 30px rgba(0,0,0,.05);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 10px; z-index: 10;
+    }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .brand img{ width:46px; height:46px; border-radius:12px; object-fit:cover; border:1px solid rgba(0,0,0,.08); }
+    .brand .title{ font-weight:800; letter-spacing:.2px; }
+    .brand .subtitle{ font-size:12px; color:var(--muted); margin-top:2px; }
+
+    .top-actions{ display:flex; gap:10px; align-items:center; }
+    .btn{
+      border:0; border-radius:12px; padding:10px 14px; cursor:pointer;
+      font-weight:700; font-size:13px;
+    }
+    .btn-primary{
+      background: linear-gradient(135deg, var(--gold), #d1ad5f);
+      color:#fff;
+      box-shadow: 0 10px 22px rgba(200,162,77,.25);
+    }
+    .btn-ghost{
+      background:#fff; border:1px solid rgba(0,0,0,.08); color:#111827;
+    }
+
+    h2{ margin:18px 0 6px; font-size:26px; }
+    .help{ color:var(--muted); margin:0 0 18px; font-size:13px; }
+
+    /* Collapsible cards */
+    details.card{
+      background:var(--card); border:1px solid var(--stroke); border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      margin-bottom:16px;
+    }
+    details.card > summary{
+      list-style:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px;
+      background: linear-gradient(90deg, rgba(168,85,247,.10), rgba(123,63,160,.06));
+      font-weight:800;
+    }
+    details.card > summary::-webkit-details-marker{ display:none; }
+    .chev{ font-size:14px; color:#4b5563; }
+    details[open] .chev{ transform: rotate(180deg); }
+
+    .card-body{ padding:16px; }
+
+    /* Form grid */
+    .grid{ display:grid; gap:14px; }
+    .g2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .g3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .g4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+    .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:700; }
+    .field input, .field select, .field textarea{
+      width:100%;
+      padding:12px 12px;
+      border:1px solid rgba(17,24,39,.10);
+      border-radius:12px;
+      outline:none;
+      background:#fff;
+      font-size:14px;
+    }
+    .field textarea{ min-height:90px; resize:vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus{
+      border-color: rgba(168,85,247,.55);
+      box-shadow: 0 0 0 4px rgba(168,85,247,.12);
+    }
+    .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+    /* Profit + footer actions */
+    .footer-card{
+      background: var(--card);
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .profit{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .profit .label{ color:var(--muted); font-size:13px; font-weight:700; }
+    .profit .value{ font-size:34px; font-weight:900; color:#15803d; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn-purple{
+      background: linear-gradient(135deg, #7b3fa0, #a855f7);
+      color:#fff;
+      box-shadow: 0 10px 22px rgba(123,63,160,.22);
+    }
+    .btn-outline{
+      background:#fff; border:1px solid rgba(123,63,160,.25); color:#5b2f78;
+    }
+
+    @media (max-width: 980px){
+      .g4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .g3{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+      .g2{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <div class="topbar">
+      <div class="brand">
+        <img src="assets/Vastram_logo.png" alt="logo"/>
+        <div>
+          <div class="title">Vastram By Deva</div>
+          <div class="subtitle">New Order</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn btn-ghost" onclick="window.location.href='dashboard.html'">Dashboard</button>
+        <button class="btn btn-primary" onclick="window.location.href='orders.html'">+ New Order</button>
+      </div>
+    </div>
+
+    <h2>New Order</h2>
+    <p class="help">Enter one order daily. Use “Save & Add Next” to quickly enter multiple orders.</p>
+
+    <!-- ORDER DETAILS -->
+    <details class="card" open>
+      <summary>
+        <span>Order Details</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+
+        <div class="grid g3">
+          <div class="field">
+            <label>Order Date</label>
+            <input type="date" id="orderDate">
+          </div>
+
+          <div class="field">
+            <label>Saree / Dress</label>
+            <select id="category">
+              <option value="Saree">Saree</option>
+              <option value="Dress">Dress</option>
+              <option value="Lehenga">Lehenga</option>
+              <option value="Kurti">Kurti</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Item Description</label>
+            <input type="text" id="itemDesc" placeholder="Example: Cotton Saree - Blue Border">
+          </div>
+        </div>
+
+        <div class="grid g3">
+          <div class="field">
+            <label>Order ID (Auto)</label>
+            <input type="text" id="orderId" readonly>
+            <div class="hint">Format: <b>VD_CustomerName_0001_ddmmyy</b></div>
+          </div>
+          <div class="field">
+            <label>4-digit Order No (Auto)</label>
+            <input type="text" id="orderSeq" readonly>
+          </div>
+          <div class="field">
+            <label>ddmmyy (Auto)</label>
+            <input type="text" id="dateCode" readonly>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- CUSTOMER DETAILS -->
+    <details class="card" open>
+      <summary>
+        <span>Customer Details</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+
+        <div class="grid g2">
+          <div class="field">
+            <label>Customer Name</label>
+            <input type="text" id="customerName" placeholder="Customer Name">
+          </div>
+
+          <div class="field">
+            <label>Contact</label>
+            <input type="text" id="customerContact" placeholder="+91 9XXXXXXXXX (edit for US/UK)">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Address</label>
+    
+          <input type="text" id="addressLine1" placeholder="Address Line 1">
+          <input type="text" id="addressLine2" placeholder="Address Line 2">
+          <input type="text" id="city" placeholder="City">
+          <input type="text" id="state" placeholder="State">
+          <input type="text" id="pincode" placeholder="Pincode">
+
+        </div>
+
+      </div>
+    </details>
+
+    <!-- VENDOR DETAILS -->
+    <details class="card" open>
+      <summary>
+        <span>Vendor Details</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+
+        <div class="grid g2">
+          <div class="field">
+            <label>Vendor Name</label>
+            <input type="text" id="vendorName" placeholder="Vendor Name">
+          </div>
+          <div class="field">
+            <label>Vendor Contact</label>
+            <input type="text" id="vendorContact" placeholder="Phone / WhatsApp">
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- DELIVERY & TRACKING -->
+    <details class="card" open>
+      <summary>
+        <span>Delivery & Tracking</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+        <div class="grid g3">
+          <div class="field">
+            <label>Courier Service</label>
+            <input type="text" id="courier" placeholder="DTDC / Delhivery / India Post">
+          </div>
+          <div class="field">
+            <label>Tracking Number</label>
+            <input type="text" id="tracking" placeholder="Tracking Number">
+          </div>
+          <div class="field">
+            <label>Delivery Status</label>
+            <select id="deliveryStatus">
+              <option value="Pending">Pending</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Returned">Returned</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- CUSTOMER PAYMENT -->
+    <details class="card" open>
+      <summary>
+        <span>Customer Payment</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+
+        <div class="grid g3">
+          <div class="field">
+            <label>Mode of Payment</label>
+            <select id="custMode">
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="COD">COD</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Amount Received</label>
+            <input type="number" id="custAmount" value="0" min="0">
+          </div>
+
+          <div class="field">
+            <label>Received To Account</label>
+            <input type="text" id="custAccount" placeholder="Example: Srija UPI / HDFC / SBI">
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- VENDOR PAYMENT -->
+    <details class="card" open>
+      <summary>
+        <span>Vendor Payment</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+
+        <div class="grid g4">
+          <div class="field">
+            <label>Vendor Amount</label>
+            <input type="number" id="vendorAmount" value="0" min="0">
+          </div>
+
+          <div class="field">
+            <label>Mode of Payment</label>
+            <select id="vendorMode">
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Paid From Account</label>
+            <input type="text" id="vendorAccount" placeholder="Example: HDFC / Cash / UPI">
+          </div>
+
+          <div class="field">
+            <label>Vendor Payment Status</label>
+            <select id="vendorStatus">
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- OTHER EXPENSES -->
+    <details class="card" open>
+      <summary>
+        <span>Other Expenses</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+
+        <div class="grid g2">
+          <div class="field">
+            <label>Expense Type</label>
+            <input type="text" id="expenseType" placeholder="Customization / Delivery / Return / Extra">
+          </div>
+
+          <div class="field">
+            <label>Expense Amount</label>
+            <input type="number" id="expenseAmount" value="0" min="0">
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- NOTES -->
+    <details class="card" open>
+      <summary>
+        <span>Notes (Optional)</span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="card-body">
+        <div class="field">
+          <label>Notes</label>
+          <textarea id="notes" placeholder="Any notes... (example: exchange request, extra delivery, etc.)"></textarea>
+        </div>
+      </div>
+    </details>
+
+    <!-- FOOTER (PROFIT + ACTIONS) -->
+    <div class="footer-card">
+      <div class="profit">
+        <div class="label">Profit (Auto)</div>
+        <div class="value">₹<span id="profitValue">0</span></div>
+      </div>
+
+      <div class="actions">
+        
+        <button class="btn btn-purple" onclick="saveAddNext()">Save & Add Next</button>
+        <button class="btn btn-purple" onclick="saveGoReports()">Save & Go Reports</button>
+        <button class="btn btn-outline" onclick="resetForm()">Reset Form</button>
+      </div>
+    </div>
+
+  </div>
+
+<script type="module">
+
+/* ================= FIREBASE IMPORTS ================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ================= FIREBASE CONFIG ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAY_oTerSMIF8FYoKyyFIokX-jadXqEtb0",
+  authDomain: "vastrambydeva-fa343.firebaseapp.com",
+  projectId: "vastrambydeva-fa343",
+  storageBucket: "vastrambydeva-fa343.firebasestorage.app",
+  messagingSenderId: "988690580826",
+  appId: "1:988690580826:web:b447539adcca2032d89f63"
+};
+
+/* ================= INITIALIZE ================= */
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ================= HELPERS ================= */
+function el(id){ return document.getElementById(id); }
+
+function ddmmyyFromISO(iso){
+  const [yyyy, mm, dd] = iso.split("-");
+  return `${dd}${mm}${yyyy.slice(-2)}`;
+}
+
+/* ================= VALIDATION ================= */
+function validateForm(){
+  if(!el("customerName").value.trim()){
+    alert("Customer Name is required ❗");
+    return false;
+  }
+  if(!el("orderDate").value){
+    alert("Order Date is required ❗");
+    return false;
+  }
+  if((parseFloat(el("custAmount").value) || 0) <= 0){
+    alert("Customer Amount must be greater than 0 ❗");
+    return false;
+  }
+  return true;
+}
+
+/* ================= PROFIT ================= */
+function calculateProfit(){
+  const c = parseFloat(el("custAmount").value) || 0;
+  const v = parseFloat(el("vendorAmount").value) || 0;
+  const e = parseFloat(el("expenseAmount").value) || 0;
+  el("profitValue").innerText = c - v - e;
+}
+
+["custAmount","vendorAmount","expenseAmount"]
+.forEach(id => el(id).addEventListener("input", calculateProfit));
+
+/* ================= ORDER ID ================= */
+function generateOrderId(){
+  const isoDate = el("orderDate").value;
+  const dateCode = ddmmyyFromISO(isoDate);
+
+  const key = `VD_SEQ_${isoDate}`;
+  const current = parseInt(localStorage.getItem(key) || "0",10);
+  const next = current + 1;
+  localStorage.setItem(key,next);
+
+  const seq = String(next).padStart(4,"0");
+
+  let name = el("customerName").value.trim();
+  name = name.replace(/\s+/g,"");
+  name = name.replace(/[^a-zA-Z0-9]/g,"");
+
+  return `VD_${name}_${seq}_${dateCode}`;
+}
+
+/* ================= SAVE ORDER ================= */
+async function saveOrder(){
+
+  if(!validateForm()) return false;
+
+  const orderId = generateOrderId();
+
+  const order = {
+    orderId,
+    date: el("orderDate").value,
+    item: el("itemDesc").value,
+    customer: el("customerName").value,
+    contact: el("customerContact").value,
+    addressLine1: el("addressLine1").value,
+    addressLine2: el("addressLine2").value,
+    city: el("city").value,
+    state: el("state").value,
+    pincode: el("pincode").value,
+    vendor: el("vendorName").value,
+    courier: el("courier").value,
+    tracking: el("tracking").value,
+    vendorStatus: el("vendorStatus").value || "Pending",
+    shipped: false,
+    deliveryStatus: el("deliveryStatus").value || "Pending",
+    custMode: el("custMode").value,
+    custAmount: parseFloat(el("custAmount").value) || 0,
+    custAccount: el("custAccount").value,
+    vendorMode: el("vendorMode").value,
+    vendorAmount: parseFloat(el("vendorAmount").value) || 0,
+    vendorAccount: el("vendorAccount").value,
+    expenseType: el("expenseType").value,
+    expenseAmount: parseFloat(el("expenseAmount").value) || 0,
+    profit:
+      (parseFloat(el("custAmount").value) || 0)
+      - (parseFloat(el("vendorAmount").value) || 0)
+      - (parseFloat(el("expenseAmount").value) || 0),
+    createdAt: new Date()
+  };
+
+  try {
+    await addDoc(collection(db, "orders"), order);
+    alert("Order Saved to Cloud ✅");
+    resetForm();
+  } catch(error){
+    console.error("Firestore Error:", error);
+    alert("Error saving order ❌");
+  }
+}
+
+/* ================= BUTTON LISTENERS ================= */
+document.querySelectorAll(".btn-purple")[0]
+  .addEventListener("click", saveOrder);
+
+document.querySelectorAll(".btn-purple")[1]
+  .addEventListener("click", async () => {
+    await saveOrder();
+    window.location.href = "reports.html";
+  });
+
+function resetForm(){
+  document.querySelectorAll("input,textarea").forEach(i=>{
+    if(i.type==="number") i.value=0;
+    else i.value="";
+  });
+  el("profitValue").innerText=0;
+}
+
+</script>
+</body>
+</html>
