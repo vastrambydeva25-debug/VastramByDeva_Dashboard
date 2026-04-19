@@ -18,6 +18,7 @@
     <h2>Vastram By Deva</h2>
     <div class="brand-line">Elegant • Traditional • Premium • Royal</div>
 
+    <form id="loginForm" autocomplete="on">
     <input type="email" id="email" placeholder="Email">
 
     <div class="password-wrapper">
@@ -30,10 +31,11 @@
       <label for="remember">Remember me</label>
     </div>
 
-    <button id="loginBtn">
+    <button type="submit" id="loginBtn">
       <span id="btnText">Login</span>
       <div class="login-spinner" id="spinner"></div>
     </button>
+    </form>
 
     <div class="login-footer">© 2026 Vastram By Deva</div>
   </div>
@@ -52,7 +54,8 @@ const loginBtn = document.getElementById("loginBtn");
 const spinner = document.getElementById("spinner");
 const btnText = document.getElementById("btnText");
 
-loginBtn.addEventListener("click", async () => {
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
 
