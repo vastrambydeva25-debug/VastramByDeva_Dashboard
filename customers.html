@@ -247,13 +247,13 @@ function renderCustomers() {
                     <td><span class="badge badge-${(o.deliveryStatus || 'pending').toLowerCase()}">${o.deliveryStatus || "Pending"}</span></td>
                     <td>
                       <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editOrder('${o._id}')">✏️</button>
-                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteOrder('${o._id}')">🗑️</button>
-                        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();duplicateOrder('${o._id}')">📋</button>
-                        ${o.vendorStatus !== 'Paid' ? `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markVendorPaid('${o._id}')">💰</button>` : ''}
-                        ${o.deliveryStatus === 'Pending' ? `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markShipped('${o._id}')">🚚</button>` : ''}
-                        ${o.deliveryStatus === 'Shipped' ? `<button class="btn btn-sm btn-success" onclick="event.stopPropagation();markDelivered('${o._id}')">✅</button>` : ''}
-                        <button class="btn btn-sm btn-dark" onclick="event.stopPropagation();window.open('label.html?id=${o._id}','_blank')">🖨️</button>
+                        <button class="btn btn-sm btn-warning" title="Edit Order" onclick="event.stopPropagation();editOrder('${o._id}')">✏️</button>
+                        <button class="btn btn-sm btn-danger" title="Delete Order" onclick="event.stopPropagation();deleteOrder('${o._id}')">🗑️</button>
+                        <button class="btn btn-sm btn-outline" title="Duplicate Order" onclick="event.stopPropagation();duplicateOrder('${o._id}')">📋</button>
+                        ${o.vendorStatus !== 'Paid' ? `<button class="btn btn-sm btn-info" title="Mark Vendor Paid" onclick="event.stopPropagation();markVendorPaid('${o._id}')">💰</button>` : ''}
+                        ${o.deliveryStatus === 'Pending' ? `<button class="btn btn-sm btn-info" title="Mark Shipped" onclick="event.stopPropagation();markShipped('${o._id}')">🚚</button>` : ''}
+                        ${o.deliveryStatus === 'Shipped' ? `<button class="btn btn-sm btn-success" title="Mark Delivered" onclick="event.stopPropagation();markDelivered('${o._id}')">✅</button>` : ''}
+                        <button class="btn btn-sm btn-dark" title="Print Label" onclick="event.stopPropagation();window.open('label.html?id=${o._id}','_blank')">🖨️</button>
                       </div>
                     </td>
                   </tr>
