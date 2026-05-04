@@ -35,6 +35,7 @@
 <div class="page-container">
   <div class="page-header">
     <div>
+      <a href="#" id="backBtn" onclick="history.back()" style="display:none; color:var(--maroon); text-decoration:none; font-weight:600; font-size:14px; margin-bottom:4px;">← Back</a>
       <h2 class="page-title" id="pageTitle">New Order</h2>
       <div class="page-subtitle">Fill in order details. Profit is calculated automatically.</div>
     </div>
@@ -329,6 +330,7 @@ async function init() {
   const loadId = editId || dupId;
 
   if (loadId) {
+    el("backBtn").style.display = "inline-block";
     if (editId) el("pageTitle").textContent = "Edit Order";
     if (dupId) {
       el("pageTitle").textContent = "Duplicate Order";
