@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trash | Vastram By Deva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">🗑️ Trash / Backup</h2>
+      <div class="page-subtitle">Deleted orders are saved here. You can restore or permanently delete them.</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-danger" id="btnEmptyTrash">🗑️ Empty Trash</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="stats-grid" id="trashStats" style="display:none;">
+    <div class="stat-card">
+      <div class="stat-label">Deleted Orders</div>
+      <div class="stat-value" id="trashCount">0</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-label">Revenue (Deleted)</div>
+      <div class="stat-value">₹<span id="trashRevenue">0</span></div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Active Orders</div>
+      <div class="stat-value" id="activeCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Restore All</div>
+      <div class="stat-value"><button class="btn btn-sm btn-primary" id="btnRestoreAll">♻️ Restore</button></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Deleted On</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="trashTableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-icon">✨</div>
+      <div>Trash is empty. No deleted orders.</div>
+    </div>
+  </div>
+
+  <div class="loading-spinner" id="loadingState">
+    <div class="spinner-ring"></div>
+    Loading trash...
+  </div>
+</div>
+
+<script type="module">
+import { db } from "./js/firebase-config.js";
+import { requireAuth } from "./js/auth-guard.js";
+import { renderNav } from "./js/nav.js";
+import { showToast } from "./js/toast.js";
+import { invalidateCache } from "./js/data-cache.js";
+import { collection, getDocs, addDoc, doc, deleteDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+renderNav("trash");
+
+let trashOrders = [];
+
+async function init() {
+  try {
+    await requireAuth();
+    await loadTrash();
+  } catch(e) {
+    console.error("Trash init error:", e);
+    document.getElementById("loadingState").innerHTML =
+      '<div style="color:red;">Error loading. Check console.</div>';
+  }
+}
+
+async function loadTrash() {
+  const [trashSnap, ordersSnap] = await Promise.all([
+    getDocs(collection(db, "trash")),
+    getDocs(collection(db, "orders"))
+  ]);
+
+  trashOrders = [];
+  trashSnap.forEach(d => {
+    trashOrders.push({ ...d.data(), _id: d.id });
+  });
+  trashOrders.sort((a, b) => (b.deletedAt || "").localeCompare(a.deletedAt || ""));
+
+  // Stats
+  const totalRevenue = trashOrders.reduce((s, o) => s + (Number(o.custAmount) || 0), 0);
+  document.getElementById("trashCount").textContent = trashOrders.length;
+  document.getElementById("trashRevenue").textContent = totalRevenue.toLocaleString("en-IN");
+  document.getElementById("activeCount").textContent = ordersSnap.size;
+
+  document.getElementById("loadingState").style.display = "none";
+  document.getElementById("trashStats").style.display = "grid";
+  renderTrash();
+}
+
+function renderTrash() {
+  const tbody = document.getElementById("trashTableBody");
+  const emptyState = document.getElementById("emptyState");
+
+  if (trashOrders.length === 0) {
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+
+  tbody.innerHTML = trashOrders.map(o => {
+    const deletedDate = o.deletedAt
+      ? new Date(o.deletedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+      : "Unknown";
+    return `
+    <tr>
+      <td style="font-weight:600; font-size:12px;">${o.orderId || "-"}</td>
+      <td>${o.date || "-"}</td>
+      <td>${o.customer || "-"}</td>
+      <td style="font-weight:600;">₹${(o.custAmount || 0).toLocaleString("en-IN")}</td>
+      <td style="color:#999; font-size:12px;">${deletedDate}</td>
+      <td>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-sm btn-primary" onclick="restoreOrder('${o._id}')">♻️ Restore</button>
+          <button class="btn btn-sm btn-danger" onclick="permanentDelete('${o._id}')">❌ Delete</button>
+        </div>
+      </td>
+    </tr>
+  `}).join("");
+}
+
+// ============ RESTORE ORDER ============
+window.restoreOrder = async function(trashId) {
+  try {
+    const trashOrder = trashOrders.find(o => o._id === trashId);
+    if (!trashOrder) return;
+
+    // Remove trash metadata and add back to orders
+    const { _id, deletedAt, originalId, ...orderData } = trashOrder;
+    orderData.restoredAt = new Date().toISOString();
+
+    await addDoc(collection(db, "orders"), orderData);
+    await deleteDoc(doc(db, "trash", trashId));
+    invalidateCache();
+    showToast("Order restored successfully ♻️");
+    await loadTrash();
+  } catch(e) {
+    console.error("Restore error:", e);
+    showToast("Error restoring order", "error");
+  }
+};
+
+// ============ PERMANENT DELETE ============
+window.permanentDelete = async function(trashId) {
+  if (!confirm("Permanently delete this order? This cannot be undone!")) return;
+  try {
+    await deleteDoc(doc(db, "trash", trashId));
+    showToast("Permanently deleted ❌");
+    trashOrders = trashOrders.filter(o => o._id !== trashId);
+    renderTrash();
+    // Update count
+    document.getElementById("trashCount").textContent = trashOrders.length;
+  } catch(e) {
+    showToast("Error deleting", "error");
+  }
+};
+
+// ============ RESTORE ALL ============
+document.getElementById("btnRestoreAll").addEventListener("click", async () => {
+  if (!confirm(`Restore all ${trashOrders.length} deleted orders?`)) return;
+  try {
+    for (const o of trashOrders) {
+      const { _id, deletedAt, originalId, ...orderData } = o;
+      orderData.restoredAt = new Date().toISOString();
+      await addDoc(collection(db, "orders"), orderData);
+      await deleteDoc(doc(db, "trash", _id));
+    }
+    invalidateCache();
+    showToast(`${trashOrders.length} orders restored ♻️`);
+    await loadTrash();
+  } catch(e) {
+    showToast("Error restoring orders", "error");
+  }
+});
+
+// ============ EMPTY TRASH ============
+document.getElementById("btnEmptyTrash").addEventListener("click", async () => {
+  if (!confirm(`Permanently delete ALL ${trashOrders.length} orders from trash? This cannot be undone!`)) return;
+  try {
+    for (const o of trashOrders) {
+      await deleteDoc(doc(db, "trash", o._id));
+    }
+    showToast("Trash emptied 🗑️");
+    trashOrders = [];
+    document.getElementById("trashCount").textContent = 0;
+    renderTrash();
+  } catch(e) {
+    showToast("Error emptying trash", "error");
+  }
+});
+
+init();
+</script>
+</body>
+</html>

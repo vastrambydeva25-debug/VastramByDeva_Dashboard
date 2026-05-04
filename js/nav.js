@@ -33,6 +33,9 @@ export function renderNav(activePage) {
       <a href="vendors.html" class="${activePage === 'vendors' ? 'active' : ''}">
         <span class="nav-icon">🏪</span> Vendors
       </a>
+      <a href="trash.html" class="${activePage === 'trash' ? 'active' : ''}">
+        <span class="nav-icon">🗑️</span> Trash
+      </a>
     </div>
     <div class="nav-actions">
       <button class="nav-logout" id="logoutBtn">Logout</button>

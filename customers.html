@@ -12,16 +12,13 @@
   <div class="page-header">
     <div>
       <h2 class="page-title">Customers</h2>
-      <div class="page-subtitle">All your customers, aggregated from orders.</div>
+      <div class="page-subtitle">View, search, filter, and manage all your customers.</div>
     </div>
-    <div>
-      <input type="text" id="searchCustomer" placeholder="🔍 Search customer..." style="padding:10px 16px; border:1px solid rgba(0,0,0,.1); border-radius:8px; font-size:14px; font-family:inherit;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-outline" id="btnExcel">📥 Excel</button>
+      <button class="btn btn-outline" id="btnPDF">📄 PDF</button>
+      <button class="btn btn-primary" onclick="window.location.href='orders.html'">➕ New Order</button>
     </div>
-  </div>
-
-  <div class="loading-spinner" id="loadingState">
-    <div class="spinner-ring"></div>
-    Loading customers...
   </div>
 
   <!-- SUMMARY -->
@@ -44,12 +41,49 @@
     </div>
   </div>
 
-  <!-- CUSTOMER CARDS -->
-  <div class="customer-list" id="customerList"></div>
+  <!-- FILTERS -->
+  <div class="filters-bar">
+    <input type="text" id="searchInput" placeholder="🔍 Search customer, phone, city...">
+    <select id="statusFilter">
+      <option value="all">All Statuses</option>
+      <option value="Pending">Pending</option>
+      <option value="Shipped">Shipped</option>
+      <option value="Delivered">Delivered</option>
+      <option value="Returned">Returned</option>
+    </select>
+    <select id="sortFilter">
+      <option value="revenue">Sort: Revenue ↓</option>
+      <option value="orders">Sort: Orders ↓</option>
+      <option value="name">Sort: Name A-Z</option>
+      <option value="recent">Sort: Recent First</option>
+    </select>
+  </div>
 
-  <div class="empty-state" id="emptyState" style="display:none;">
-    <div class="empty-icon">👥</div>
-    <div>No customers found.</div>
+  <!-- TABLE -->
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Orders</th>
+          <th>Revenue</th>
+          <th>Avg Value</th>
+          <th>Last Order</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="customerTableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-icon">👥</div>
+      <div>No customers found.</div>
+    </div>
+  </div>
+
+  <div class="loading-spinner" id="loadingState">
+    <div class="spinner-ring"></div>
+    Loading customers...
   </div>
 </div>
 
@@ -57,13 +91,17 @@
 import { db } from "./js/firebase-config.js";
 import { requireAuth } from "./js/auth-guard.js";
 import { renderNav } from "./js/nav.js";
-import { getOrders } from "./js/data-cache.js";
-import { collection, getDocs }
+import { showToast } from "./js/toast.js";
+import { getOrders, invalidateCache } from "./js/data-cache.js";
+import { exportToExcel, exportToPDF } from "./js/print.js";
+import { sendOrderConfirmation, sendTrackingMessage, sendDeliveryMessage } from "./js/whatsapp.js";
+import { collection, getDocs, doc, updateDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 renderNav("customers");
 
 let customerData = [];
+let allOrdersRaw = [];
 
 async function init() {
   try {
@@ -71,14 +109,16 @@ async function init() {
     await loadCustomers();
   } catch(e) {
     console.error("Customers init error:", e);
+    document.getElementById("loadingState").innerHTML =
+      '<div style="color:red;">Error loading. Check console.</div>';
   }
 }
 
 async function loadCustomers() {
-  const allOrders = await getOrders();
+  allOrdersRaw = await getOrders();
   const map = {};
 
-  allOrders.forEach(o => {
+  allOrdersRaw.forEach(o => {
     const name = (o.customer || "").trim();
     if (!name) return;
 
@@ -86,26 +126,31 @@ async function loadCustomers() {
       map[name] = {
         name,
         contact: o.contact || "",
-        city: o.city || "",
-        state: o.state || "",
+        address: o.address || [o.addressLine1, o.addressLine2, o.city, o.state, o.pincode].filter(Boolean).join(", ") || "",
         orders: 0,
         revenue: 0,
+        profit: 0,
         lastOrder: "",
-        lastStatus: ""
+        lastStatus: "",
+        orderIds: []
       };
     }
 
     map[name].orders++;
     map[name].revenue += Number(o.custAmount) || 0;
+    map[name].profit += Number(o.profit) || 0;
+    map[name].orderIds.push(o._id);
     if (o.date > map[name].lastOrder) {
       map[name].lastOrder = o.date;
       map[name].lastStatus = o.deliveryStatus || "Pending";
     }
     if (!map[name].contact && o.contact) map[name].contact = o.contact;
-    if (!map[name].city && o.city) map[name].city = o.city;
+    if (!map[name].address && (o.address || o.addressLine1 || o.city)) {
+      map[name].address = o.address || [o.addressLine1, o.addressLine2, o.city, o.state, o.pincode].filter(Boolean).join(", ");
+    }
   });
 
-  customerData = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+  customerData = Object.values(map);
 
   // Summary
   const totalRevenue = customerData.reduce((s, c) => s + c.revenue, 0);
@@ -121,49 +166,179 @@ async function loadCustomers() {
   renderCustomers();
 }
 
-function renderCustomers(filter = "") {
-  const list = document.getElementById("customerList");
-  const filtered = customerData.filter(c =>
-    c.name.toLowerCase().includes(filter.toLowerCase())
-  );
+function getCustomerOrders(customerName) {
+  return allOrdersRaw
+    .filter(o => (o.customer || "").trim() === customerName)
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+}
+
+function renderCustomers() {
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const statusF = document.getElementById("statusFilter").value;
+  const sortF = document.getElementById("sortFilter").value;
+
+  let filtered = customerData.filter(c => {
+    const matchSearch =
+      c.name.toLowerCase().includes(search) ||
+      (c.contact || "").includes(search) ||
+      (c.address || "").toLowerCase().includes(search);
+    const matchStatus = statusF === "all" || c.lastStatus === statusF;
+    return matchSearch && matchStatus;
+  });
+
+  // Sort
+  if (sortF === "revenue") filtered.sort((a, b) => b.revenue - a.revenue);
+  else if (sortF === "orders") filtered.sort((a, b) => b.orders - a.orders);
+  else if (sortF === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sortF === "recent") filtered.sort((a, b) => (b.lastOrder || "").localeCompare(a.lastOrder || ""));
+
+  const tbody = document.getElementById("customerTableBody");
+  const emptyState = document.getElementById("emptyState");
 
   if (filtered.length === 0) {
-    list.innerHTML = "";
-    document.getElementById("emptyState").style.display = "block";
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
     return;
   }
-  document.getElementById("emptyState").style.display = "none";
+  emptyState.style.display = "none";
 
-  list.innerHTML = filtered.map(c => {
-    const statusClass = (c.lastStatus || "Pending") === "Delivered" ? "delivered"
-      : c.lastStatus === "Shipped" ? "shipped"
-      : c.lastStatus === "Returned" ? "returned" : "pending";
+  tbody.innerHTML = filtered.map(c => {
     const phone = (c.contact || "").replace(/\D/g, "");
-    const waLink = phone ? `https://wa.me/91${phone.slice(-10)}` : "#";
+    const waLink = phone ? `https://wa.me/91${phone.slice(-10)}` : "";
+    const statusClass = (c.lastStatus || "pending").toLowerCase();
+    const custOrders = getCustomerOrders(c.name);
 
     return `
-    <div class="customer-card" style="position:relative;">
-      <span class="badge badge-${statusClass}" style="position:absolute; top:12px; right:12px; font-size:11px;">
-        ${c.lastStatus || "Pending"}
-      </span>
-      <div class="customer-name">${c.name}</div>
-      <div class="customer-meta">
-        📞 <a href="tel:${c.contact}" style="color:var(--maroon); font-weight:600;">${c.contact || "N/A"}</a>
-        ${phone ? `<a href="${waLink}" target="_blank" title="Chat on WhatsApp" style="margin-left:6px; text-decoration:none; vertical-align:middle;"><img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" width="22" height="22" style="vertical-align:middle;"></a>` : ""}
-        &nbsp;•&nbsp; 📍 ${[c.city, c.state].filter(Boolean).join(", ") || "N/A"}
-      </div>
-      <div class="customer-stats">
-        <div>Orders<strong>${c.orders}</strong></div>
-        <div>Revenue<strong>₹${c.revenue.toLocaleString("en-IN")}</strong></div>
-        <div>Last Order<strong>${c.lastOrder || "N/A"}</strong></div>
-        <div>Avg Value<strong>₹${c.orders > 0 ? Math.round(c.revenue / c.orders).toLocaleString("en-IN") : 0}</strong></div>
-      </div>
-    </div>
+    <tr onclick="toggleDetails('${encodeURIComponent(c.name)}')" style="cursor:pointer;">
+      <td style="font-weight:600;">${c.name}</td>
+      <td>
+        ${c.contact || "N/A"}
+        ${waLink ? `<a href="${waLink}" target="_blank" onclick="event.stopPropagation();" title="WhatsApp" style="margin-left:6px;"><img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WA" width="18" height="18" style="vertical-align:middle;"></a>` : ""}
+      </td>
+      <td style="text-align:center; font-weight:600;">${c.orders}</td>
+      <td style="font-weight:700;">₹${c.revenue.toLocaleString("en-IN")}</td>
+      <td>₹${c.orders > 0 ? Math.round(c.revenue / c.orders).toLocaleString("en-IN") : 0}</td>
+      <td>${c.lastOrder || "N/A"}</td>
+      <td><span class="badge badge-${statusClass}">${c.lastStatus || "Pending"}</span></td>
+    </tr>
+    <tr id="details-${CSS.escape(c.name)}" style="display:none;">
+      <td colspan="7">
+        <div class="details-box">
+          <div class="details-grid">
+            <div><b>Phone:</b> ${c.contact || "N/A"}</div>
+            <div><b>Total Profit:</b> <span style="color:${c.profit >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">₹${c.profit.toLocaleString("en-IN")}</span></div>
+            <div style="grid-column: span 2;"><b>Address:</b> ${c.address || "N/A"}</div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <b style="color:var(--maroon);">Order History (${custOrders.length})</b>
+            <table class="data-table" style="margin-top:8px; font-size:13px;">
+              <thead>
+                <tr><th>Order ID</th><th>Date</th><th>Item</th><th>Amount</th><th>Profit</th><th>Delivery</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                ${custOrders.map(o => `
+                  <tr>
+                    <td style="font-size:11px; font-weight:600;">${o.orderId || "-"}</td>
+                    <td>${o.date || "-"}</td>
+                    <td>${(o.item || "-").substring(0, 25)}</td>
+                    <td>₹${(o.custAmount || 0).toLocaleString("en-IN")}</td>
+                    <td style="color:${(o.profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:600;">₹${(o.profit || 0).toLocaleString("en-IN")}</td>
+                    <td><span class="badge badge-${(o.deliveryStatus || 'pending').toLowerCase()}">${o.deliveryStatus || "Pending"}</span></td>
+                    <td>
+                      <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                        <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editOrder('${o._id}')">✏️</button>
+                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteOrder('${o._id}')">🗑️</button>
+                        ${o.vendorStatus !== 'Paid' ? `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markVendorPaid('${o._id}')">💰</button>` : ''}
+                        ${o.deliveryStatus === 'Pending' ? `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markShipped('${o._id}')">🚚</button>` : ''}
+                        ${o.deliveryStatus === 'Shipped' ? `<button class="btn btn-sm btn-success" onclick="event.stopPropagation();markDelivered('${o._id}')">✅</button>` : ''}
+                        <button class="btn btn-sm btn-dark" onclick="event.stopPropagation();window.open('label.html?id=${o._id}','_blank')">🖨️</button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </td>
+    </tr>
   `}).join("");
 }
 
-document.getElementById("searchCustomer").addEventListener("input", (e) => {
-  renderCustomers(e.target.value);
+// ============ ACTIONS ============
+window.toggleDetails = function(name) {
+  const decoded = decodeURIComponent(name);
+  const row = document.getElementById("details-" + CSS.escape(decoded));
+  if (row) row.style.display = row.style.display === "none" ? "table-row" : "none";
+};
+
+window.editOrder = function(id) {
+  sessionStorage.setItem("editOrderId", id);
+  window.location.href = "orders.html";
+};
+
+window.deleteOrder = async function(id) {
+  if (!confirm("Are you sure you want to delete this order?")) return;
+  try {
+    // Backup to trash before deleting
+    const orderToDelete = allOrdersRaw.find(o => o._id === id);
+    if (orderToDelete) {
+      const { _id, ...data } = orderToDelete;
+      const { addDoc: addTrash, collection: trashCol } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      await addTrash(trashCol(db, "trash"), { ...data, deletedAt: new Date().toISOString(), originalId: _id });
+    }
+    await deleteDoc(doc(db, "orders", id));
+    invalidateCache();
+    showToast("Order moved to trash 🗑️");
+    await loadCustomers();
+  } catch (e) {
+    showToast("Error deleting order", "error");
+  }
+};
+
+window.markVendorPaid = async function(id) {
+  await updateDoc(doc(db, "orders", id), { vendorStatus: "Paid" });
+  invalidateCache();
+  showToast("Vendor marked as Paid ✅");
+  await loadCustomers();
+};
+
+window.markShipped = async function(id) {
+  await updateDoc(doc(db, "orders", id), { deliveryStatus: "Shipped" });
+  invalidateCache();
+  const order = allOrdersRaw.find(o => o._id === id);
+  if (order) sendTrackingMessage(order);
+  showToast("Marked as Shipped 🚚");
+  await loadCustomers();
+};
+
+window.markDelivered = async function(id) {
+  await updateDoc(doc(db, "orders", id), { deliveryStatus: "Delivered" });
+  invalidateCache();
+  const order = allOrdersRaw.find(o => o._id === id);
+  if (order) sendDeliveryMessage(order);
+  showToast("Marked as Delivered ✅");
+  await loadCustomers();
+};
+
+// ============ FILTERS ============
+["searchInput", "statusFilter", "sortFilter"].forEach(id => {
+  document.getElementById(id).addEventListener(id === "searchInput" ? "input" : "change", renderCustomers);
+});
+
+// ============ EXPORT ============
+document.getElementById("btnExcel").addEventListener("click", async () => {
+  showToast("Generating Excel... ⏳", "info");
+  const custOrders = allOrdersRaw.filter(o => customerData.some(c => c.name === (o.customer || "").trim()));
+  await exportToExcel(custOrders, "Vastram_Customers");
+  showToast("Excel exported 📥", "info");
+});
+document.getElementById("btnPDF").addEventListener("click", async () => {
+  showToast("Generating PDF... ⏳", "info");
+  const custOrders = allOrdersRaw.filter(o => customerData.some(c => c.name === (o.customer || "").trim()));
+  await exportToPDF(custOrders, "Vastram_Customers");
+  showToast("PDF exported 📄", "info");
 });
 
 init();

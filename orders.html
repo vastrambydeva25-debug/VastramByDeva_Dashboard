@@ -5,6 +5,30 @@
   <title>New Order | Vastram By Deva</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .order-success-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 999;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .order-success-card {
+      background: #fff; border-radius: 16px; padding: 36px 32px;
+      text-align: center; max-width: 400px; width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: popIn 0.3s ease;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .order-success-card .success-icon { font-size: 48px; margin-bottom: 12px; }
+    .order-success-card .order-id-display {
+      background: var(--cream); color: var(--maroon); font-weight: 700;
+      font-size: 14px; padding: 10px 16px; border-radius: 8px;
+      margin: 16px 0; word-break: break-all; border: 2px dashed var(--gold);
+    }
+    .order-success-card .success-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+  </style>
 </head>
 <body>
 
@@ -58,29 +82,9 @@
           <input type="text" id="customerContact" placeholder="+91 9XXXXXXXXX">
         </div>
       </div>
-      <div class="form-grid cols-2" style="margin-top:14px;">
-        <div class="field">
-          <label>Address Line 1</label>
-          <input type="text" id="addressLine1" placeholder="Address Line 1">
-        </div>
-        <div class="field">
-          <label>Address Line 2</label>
-          <input type="text" id="addressLine2" placeholder="Address Line 2">
-        </div>
-      </div>
-      <div class="form-grid cols-3" style="margin-top:14px;">
-        <div class="field">
-          <label>City</label>
-          <input type="text" id="city" placeholder="City">
-        </div>
-        <div class="field">
-          <label>State</label>
-          <input type="text" id="state" placeholder="State">
-        </div>
-        <div class="field">
-          <label>Pincode</label>
-          <input type="text" id="pincode" placeholder="Pincode">
-        </div>
+      <div class="field" style="margin-top:14px;">
+        <label>Full Address</label>
+        <textarea id="address" placeholder="Full address — House No, Street, City, State, Pincode" rows="2" style="resize:vertical;"></textarea>
       </div>
     </div>
   </details>
@@ -222,12 +226,25 @@
       <div class="profit-value">₹<span id="profitValue">0</span></div>
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button class="btn btn-maroon" id="btnSaveNext">💾 Save & Add Next</button>
-      <button class="btn btn-primary" id="btnSaveReports">📋 Save & Go Reports</button>
+      <button class="btn btn-primary" id="btnSave">💾 Save Order</button>
       <button class="btn btn-outline" id="btnReset">↺ Reset</button>
     </div>
   </div>
 
+</div>
+
+<!-- SUCCESS POPUP (hidden by default) -->
+<div id="successOverlay" class="order-success-overlay" style="display:none;">
+  <div class="order-success-card">
+    <div class="success-icon">✅</div>
+    <h3 style="color:var(--maroon); margin:0;">Order Saved Successfully!</h3>
+    <div class="order-id-display" id="savedOrderId">VD_XXX_0001_010126</div>
+    <p style="color:#666; font-size:13px; margin:8px 0 0;">Order has been saved to the database.</p>
+    <div class="success-actions">
+      <button class="btn btn-primary" id="btnNewOrder">➕ New Order</button>
+      <button class="btn btn-outline" onclick="window.location.href='reports.html'">📋 Go to Reports</button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -243,10 +260,10 @@ import { collection, addDoc, getDocs, doc, getDoc, updateDoc }
 
 renderNav("orders");
 
-// ============ HELPERS ============
 function el(id) { return document.getElementById(id); }
 
 let editId = null;
+let cachedSnapshot = null;
 
 async function init() {
   try {
@@ -256,105 +273,100 @@ async function init() {
     return;
   }
 
-// Set default date to today
-el("orderDate").value = new Date().toISOString().split("T")[0];
+  el("orderDate").value = new Date().toISOString().split("T")[0];
 
-// ============ AUTO-SUGGEST CUSTOMERS & VENDORS ============
-async function loadSuggestions() {
-  const snapshot = await getDocs(collection(db, "orders"));
-  const customers = new Set();
-  const vendors = new Set();
+  // ============ AUTO-SUGGEST ============
+  async function loadSuggestions() {
+    cachedSnapshot = await getDocs(collection(db, "orders"));
+    const customers = new Set();
+    const vendors = new Set();
 
-  snapshot.forEach(d => {
-    const o = d.data();
-    if (o.customer) customers.add(o.customer);
-    if (o.vendor) vendors.add(o.vendor);
-  });
-
-  const custList = el("customerSuggestions");
-  const vendList = el("vendorSuggestions");
-  customers.forEach(c => { custList.innerHTML += `<option value="${c}">`; });
-  vendors.forEach(v => { vendList.innerHTML += `<option value="${v}">`; });
-
-  // Auto-fill customer details when name is selected
-  el("customerName").addEventListener("change", () => {
-    const name = el("customerName").value;
-    snapshot.forEach(d => {
+    cachedSnapshot.forEach(d => {
       const o = d.data();
-      if (o.customer === name) {
-        if (!el("customerContact").value) el("customerContact").value = o.contact || "";
-        if (!el("addressLine1").value) el("addressLine1").value = o.addressLine1 || "";
-        if (!el("addressLine2").value) el("addressLine2").value = o.addressLine2 || "";
-        if (!el("city").value) el("city").value = o.city || "";
-        if (!el("state").value) el("state").value = o.state || "";
-        if (!el("pincode").value) el("pincode").value = o.pincode || "";
-      }
+      if (o.customer) customers.add(o.customer);
+      if (o.vendor) vendors.add(o.vendor);
     });
-  });
 
-  // Auto-fill vendor contact
-  el("vendorName").addEventListener("change", () => {
-    const name = el("vendorName").value;
-    snapshot.forEach(d => {
-      const o = d.data();
-      if (o.vendor === name && o.vendorContact) {
-        if (!el("vendorContact").value) el("vendorContact").value = o.vendorContact;
-      }
+    const custList = el("customerSuggestions");
+    const vendList = el("vendorSuggestions");
+    custList.innerHTML = "";
+    vendList.innerHTML = "";
+    customers.forEach(c => { custList.innerHTML += `<option value="${c}">`; });
+    vendors.forEach(v => { vendList.innerHTML += `<option value="${v}">`; });
+
+    // Auto-fill customer details
+    el("customerName").addEventListener("change", () => {
+      const name = el("customerName").value;
+      cachedSnapshot.forEach(d => {
+        const o = d.data();
+        if (o.customer === name) {
+          if (!el("customerContact").value) el("customerContact").value = o.contact || "";
+          if (!el("address").value) {
+            // Support both old (multi-field) and new (single field) addresses
+            el("address").value = o.address || [o.addressLine1, o.addressLine2, o.city, o.state, o.pincode].filter(Boolean).join(", ") || "";
+          }
+        }
+      });
     });
-  });
-}
 
-loadSuggestions();
-
-// ============ CHECK FOR EDIT MODE ============
-editId = sessionStorage.getItem("editOrderId");
-const dupId = sessionStorage.getItem("duplicateOrderId");
-const loadId = editId || dupId;
-
-if (loadId) {
-  if (editId) el("pageTitle").textContent = "Edit Order";
-  if (dupId) {
-    el("pageTitle").textContent = "Duplicate Order";
-    sessionStorage.removeItem("duplicateOrderId");
+    // Auto-fill vendor contact
+    el("vendorName").addEventListener("change", () => {
+      const name = el("vendorName").value;
+      cachedSnapshot.forEach(d => {
+        const o = d.data();
+        if (o.vendor === name && o.vendorContact) {
+          if (!el("vendorContact").value) el("vendorContact").value = o.vendorContact;
+        }
+      });
+    });
   }
-  const editDoc = await getDoc(doc(db, "orders", loadId)).catch(e => { console.error(e); return null; });
-  if (editDoc && editDoc.exists()) {
-    const o = editDoc.data();
-    el("orderDate").value = o.date || "";
-    el("category").value = o.category || "Saree";
-    el("itemDesc").value = o.item || "";
-    el("customerName").value = o.customer || "";
-    el("customerContact").value = o.contact || "";
-    el("addressLine1").value = o.addressLine1 || "";
-    el("addressLine2").value = o.addressLine2 || "";
-    el("city").value = o.city || "";
-    el("state").value = o.state || "";
-    el("pincode").value = o.pincode || "";
-    el("vendorName").value = o.vendor || "";
-    el("vendorContact").value = o.vendorContact || "";
-    el("courier").value = o.courier || "";
-    el("tracking").value = o.tracking || "";
-    el("deliveryStatus").value = o.deliveryStatus || "Pending";
-    el("custMode").value = o.custMode || "UPI";
-    el("custAmount").value = o.custAmount || 0;
-    el("custAccount").value = o.custAccount || "";
-    el("vendorAmount").value = o.vendorAmount || 0;
-    el("vendorMode").value = o.vendorMode || "UPI";
-    el("vendorAccount").value = o.vendorAccount || "";
-    el("vendorStatus").value = o.vendorStatus || "Pending";
-    el("expenseType").value = o.expenseType || "";
-    el("expenseAmount").value = o.expenseAmount || 0;
-    el("notes").value = o.notes || "";
-    calculateProfit();
+
+  loadSuggestions();
+
+  // ============ EDIT / DUPLICATE MODE ============
+  editId = sessionStorage.getItem("editOrderId");
+  const dupId = sessionStorage.getItem("duplicateOrderId");
+  const loadId = editId || dupId;
+
+  if (loadId) {
+    if (editId) el("pageTitle").textContent = "Edit Order";
+    if (dupId) {
+      el("pageTitle").textContent = "Duplicate Order";
+      sessionStorage.removeItem("duplicateOrderId");
+    }
+    const editDoc = await getDoc(doc(db, "orders", loadId)).catch(e => { console.error(e); return null; });
+    if (editDoc && editDoc.exists()) {
+      const o = editDoc.data();
+      el("orderDate").value = o.date || "";
+      el("category").value = o.category || "Saree";
+      el("itemDesc").value = o.item || "";
+      el("customerName").value = o.customer || "";
+      el("customerContact").value = o.contact || "";
+      el("address").value = o.address || [o.addressLine1, o.addressLine2, o.city, o.state, o.pincode].filter(Boolean).join(", ") || "";
+      el("vendorName").value = o.vendor || "";
+      el("vendorContact").value = o.vendorContact || "";
+      el("courier").value = o.courier || "";
+      el("tracking").value = o.tracking || "";
+      el("deliveryStatus").value = o.deliveryStatus || "Pending";
+      el("custMode").value = o.custMode || "UPI";
+      el("custAmount").value = o.custAmount || 0;
+      el("custAccount").value = o.custAccount || "";
+      el("vendorAmount").value = o.vendorAmount || 0;
+      el("vendorMode").value = o.vendorMode || "UPI";
+      el("vendorAccount").value = o.vendorAccount || "";
+      el("vendorStatus").value = o.vendorStatus || "Pending";
+      el("expenseType").value = o.expenseType || "";
+      el("expenseAmount").value = o.expenseAmount || 0;
+      el("notes").value = o.notes || "";
+      calculateProfit();
+    }
+    if (dupId) editId = null;
   }
-  // For duplicate: clear editId so it creates a new order
-  if (dupId) editId = null;
-}
 
 } // end init()
 init();
 
-// ============ PROFIT CALCULATION ============
+// ============ PROFIT ============
 function calculateProfit() {
   const c = parseFloat(el("custAmount").value) || 0;
   const v = parseFloat(el("vendorAmount").value) || 0;
@@ -388,7 +400,7 @@ function validateForm() {
 
 // ============ SAVE ORDER ============
 async function saveOrder() {
-  if (!validateForm()) return false;
+  if (!validateForm()) return null;
 
   const custAmount = parseFloat(el("custAmount").value) || 0;
   const vendorAmount = parseFloat(el("vendorAmount").value) || 0;
@@ -400,11 +412,7 @@ async function saveOrder() {
     item: el("itemDesc").value,
     customer: el("customerName").value.trim(),
     contact: el("customerContact").value.trim(),
-    addressLine1: el("addressLine1").value,
-    addressLine2: el("addressLine2").value,
-    city: el("city").value,
-    state: el("state").value,
-    pincode: el("pincode").value,
+    address: el("address").value.trim(),
     vendor: el("vendorName").value,
     vendorContact: el("vendorContact").value,
     courier: el("courier").value,
@@ -426,25 +434,24 @@ async function saveOrder() {
 
   try {
     if (editId) {
-      // Update existing order
       await updateDoc(doc(db, "orders", editId), orderData);
       invalidateCache();
       sessionStorage.removeItem("editOrderId");
       showToast("Order updated successfully ✅");
+      setTimeout(() => { window.location.href = "reports.html"; }, 1000);
+      return "UPDATED";
     } else {
-      // Create new order
       const orderId = await generateOrderId(orderData.customer, orderData.date);
       orderData.orderId = orderId;
       orderData.createdAt = new Date().toISOString();
       await addDoc(collection(db, "orders"), orderData);
       invalidateCache();
-      showToast("Order saved successfully ✅");
+      return orderId;
     }
-    return true;
   } catch (error) {
     console.error("Save error:", error);
     showToast("Error: " + error.message, "error");
-    return false;
+    return null;
   }
 }
 
@@ -457,22 +464,38 @@ function resetForm() {
   });
   document.querySelectorAll("select").forEach(s => s.selectedIndex = 0);
   el("profitValue").innerText = "0";
+  el("profitValue").style.color = "var(--success)";
   sessionStorage.removeItem("editOrderId");
+  editId = null;
   el("pageTitle").textContent = "New Order";
 }
 
 // ============ BUTTON EVENTS ============
-el("btnSaveNext").addEventListener("click", async () => {
-  const saved = await saveOrder();
-  if (saved) resetForm();
+el("btnSave").addEventListener("click", async () => {
+  el("btnSave").disabled = true;
+  el("btnSave").textContent = "⏳ Saving...";
+
+  const result = await saveOrder();
+
+  el("btnSave").disabled = false;
+  el("btnSave").textContent = "💾 Save Order";
+
+  if (result && result !== "UPDATED") {
+    // Show success popup with order ID
+    el("savedOrderId").textContent = result;
+    el("successOverlay").style.display = "flex";
+  }
 });
 
-el("btnSaveReports").addEventListener("click", async () => {
-  const saved = await saveOrder();
-  if (saved) window.location.href = "reports.html";
+el("btnNewOrder").addEventListener("click", () => {
+  el("successOverlay").style.display = "none";
+  resetForm();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-el("btnReset").addEventListener("click", resetForm);
+el("btnReset").addEventListener("click", () => {
+  if (confirm("Reset all fields?")) resetForm();
+});
 </script>
 </body>
 </html>

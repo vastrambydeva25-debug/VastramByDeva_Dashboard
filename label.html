@@ -44,11 +44,11 @@ if (id) {
     document.getElementById("customer").textContent = o.customer || "-";
     document.getElementById("contact").textContent = o.contact || "-";
 
-    const addressParts = [
-      o.addressLine1, o.addressLine2,
-      o.city && o.pincode ? `${o.city} - ${o.pincode}` : o.city || "",
-      o.state
-    ].filter(Boolean);
+    const addressParts = o.address
+      ? [o.address]
+      : [o.addressLine1, o.addressLine2,
+         o.city && o.pincode ? `${o.city} - ${o.pincode}` : o.city || "",
+         o.state].filter(Boolean);
     document.getElementById("address").innerHTML = addressParts.join("<br>");
     }
   }).catch(e => console.error("Label load error:", e));
