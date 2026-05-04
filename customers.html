@@ -249,6 +249,7 @@ function renderCustomers() {
                       <div style="display:flex; gap:4px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editOrder('${o._id}')">✏️</button>
                         <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteOrder('${o._id}')">🗑️</button>
+                        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();duplicateOrder('${o._id}')">📋</button>
                         ${o.vendorStatus !== 'Paid' ? `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markVendorPaid('${o._id}')">💰</button>` : ''}
                         ${o.deliveryStatus === 'Pending' ? `<button class="btn btn-sm btn-info" onclick="event.stopPropagation();markShipped('${o._id}')">🚚</button>` : ''}
                         ${o.deliveryStatus === 'Shipped' ? `<button class="btn btn-sm btn-success" onclick="event.stopPropagation();markDelivered('${o._id}')">✅</button>` : ''}
@@ -275,6 +276,12 @@ window.toggleDetails = function(name) {
 
 window.editOrder = function(id) {
   sessionStorage.setItem("editOrderId", id);
+  window.location.href = "orders.html";
+};
+
+window.duplicateOrder = function(id) {
+  sessionStorage.setItem("duplicateOrderId", id);
+  sessionStorage.removeItem("editOrderId");
   window.location.href = "orders.html";
 };
 
